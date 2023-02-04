@@ -15,14 +15,29 @@ int main() {
   //     printf("%d\n", __binary__[i]);
   // }
   // s21_mul(p1, p2, &p3);
-  s21_decimal p1 = {0, 0, 412267817, 0};
-  s21_decimal p2 = {0, 0, 412267812, 0};
-  s21_decimal result = {0, 0, 0, 0};
 
-  s21_div(p1, p2, &result);
-  printf("%d\n", result.bits[0]);
-  printf("%d\n", result.bits[1]);
-  printf("%d\n", result.bits[2]);
+
+
+  // s21_decimal p1 = {0, 0, 23, 65536};  // 1.373 2
+  // s21_decimal p2 = {0, 0, 43, 131072}; // 1 0
+  // s21_decimal result = {0, 0, 0, 0};
+
+  // s21_add(p1, p2, &result);
+  // printf("%d\n", result.bits[0]);
+  // printf("%d\n", result.bits[1]);
+  // printf("%d\n", result.bits[2]);
+  // printf("%d\n\n", result.bits[3]);
+
+
+  // float dst = 0;
+  // s21_from_decimal_to_float(result, &dst);
+  // printf("%f\n", dst);
+
+  float a = 123123465.1;
+  printf("%f\n", a);
+
+  a *= 1000;
+  printf("%f\n", a);
 
   // printf("%d\n", s21_is_greater(p1, p2));
 
@@ -85,13 +100,38 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
   _Bool __result__[96] = {false};
 
+  s21_decimal_info info_1 = {0};
+  s21_decimal_info info_2 = {0};
+
+  __take_info__(&info_1, value_1);
+  __take_info__(&info_2, value_2);
+
+  // Возможно придется фиксить
+
+  result->bits[3] =
+      info_1.position > info_2.position ? value_1.bits[3] : value_2.bits[3];
+
+  // Возможно придется фиксить
+
+  if (info_1.position != 0 || info_2.position != 0) {
+    if (info_1.position > info_2.position) {
+      for (int i = info_1.position - info_2.position; i != 96; i++) {
+        __binary2__[i] = __binary2__[i + (info_1.position - info_2.position)];
+      }
+    } else if (info_1.position < info_2.position) {
+
+      for (int i = info_2.position - info_1.position; i != 96; i++) {
+        __binary1__[i] = __binary1__[i + (info_2.position - info_1.position)];
+      }
+    }
+  }
+
   __s21_add__(__binary1__, __binary2__, __result__);
 
   convert_binary_into_decimal(__result__, result);
 }
 
 void __s21_add__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
-
   int k, p = 0;
   for (int i = 95; i != -1; i--) {
     k = __binary1__[i] + __binary2__[i] + p;
@@ -272,21 +312,61 @@ int __s21_is_equal__(_Bool *__binary1__, _Bool *__binary2__, int return_value) {
 }
 
 int s21_is_less(s21_decimal value_1, s21_decimal value_2) {
-  int return_value = s21_is_greater_or_equal(value_1, value_2) ? 0: 1; 
+  int return_value = s21_is_greater_or_equal(value_1, value_2) ? 0 : 1;
   return return_value;
 }
 
 int s21_is_not_equal(s21_decimal value_1, s21_decimal value_2) {
-  int return_value = s21_is_equal(value_1, value_2) ? 0: 1;
+  int return_value = s21_is_equal(value_1, value_2) ? 0 : 1;
   return return_value;
 }
 
 int s21_is_less_or_equal(s21_decimal value_1, s21_decimal value_2) {
-  int return_value = (s21_is_less(value_1, value_2) || s21_is_equal(value_1, value_2)) ? 1: 0;
+  int return_value =
+      (s21_is_less(value_1, value_2) || s21_is_equal(value_1, value_2)) ? 1 : 0;
   return return_value;
 }
 
 int s21_is_greater(s21_decimal value_1, s21_decimal value_2) {
-  int return_value = s21_is_less_or_equal(value_1, value_2) ? 0: 1;
+  int return_value = s21_is_less_or_equal(value_1, value_2) ? 0 : 1;
   return return_value;
+}
+
+void __take_info__(s21_decimal_info *info, s21_decimal value_1) {
+  _Bool __binary1__[32] = {false};
+
+  perform_decimal_into_binary(value_1.bits[3], 1, __binary1__);
+
+  info->minus = __binary1__[1] ? 1 : 0;
+
+  for (int i = 0; i != 8; i++) {
+    info->position += __binary1__[9 + i] * (7 - i);
+  }
+}
+
+int s21_from_decimal_to_float(s21_decimal src, float *dst) {
+  s21_decimal_info info_1 = {0};
+  __take_info__(&info_1, src);
+
+
+  _Bool __binary1__[96] = {false};
+  for (int i = 0; i != 3; i++) {
+    perform_decimal_into_binary(src.bits[i], i + 1, __binary1__);
+  }
+
+  int cnt = 0;
+  for (int i = 0; i != 96; i++, cnt++) {
+    if (__binary1__[i]) {
+      break;
+    }
+  }
+
+  for (int i = 95 - cnt - info_1.position; i >= info_1.position * -1; i--) {
+    *dst += __binary1__[cnt] * pow(2, i);
+    cnt++;
+  }
+}
+
+int s21_from_float_to_decimal(float src, s21_decimal *dst) {
+  
 }
