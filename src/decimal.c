@@ -33,11 +33,16 @@ int main() {
   // s21_from_decimal_to_float(result, &dst);
   // printf("%f\n", dst);
 
-  float a = 123123465.1;
-  printf("%f\n", a);
+  s21_decimal result = {0};
 
-  a *= 1000;
-  printf("%f\n", a);
+  float a = 123345764.1;
+  s21_from_float_to_decimal(a, &result);
+
+  printf("%d\n", result.bits[0]);
+  printf("%d\n", result.bits[1]);
+  printf("%d\n", result.bits[2]);
+  printf("%d\n", result.bits[3]);
+  
 
   // printf("%d\n", s21_is_greater(p1, p2));
 
@@ -368,5 +373,34 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
 }
 
 int s21_from_float_to_decimal(float src, s21_decimal *dst) {
-  
+
+  int million = 1000000;
+  int shift = 0;
+
+  if (src < million * 10) {
+    while (src < million) {
+      src *= 10;
+      shift++;
+    }
+  } else {
+    while (src > million * 10) {
+      src /= 10;
+    }
+  }
+
+  if ((src - (int) src) >= 0.5) {
+    src += 1.0;
+  }
+
+  s21_from_int_to_decimal((int) src, dst);
+
+}
+
+int s21_from_int_to_decimal(int src, s21_decimal *dst) {
+
+  // надо добавить минус
+
+  dst -> bits[2] = src;
+
+  return 0;
 }
