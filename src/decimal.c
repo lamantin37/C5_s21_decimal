@@ -18,31 +18,39 @@ int main() {
 
 
 
-  // s21_decimal p1 = {0, 0, 23, 65536};  // 1.373 2
-  // s21_decimal p2 = {0, 0, 43, 131072}; // 1 0
-  // s21_decimal result = {0, 0, 0, 0};
+  s21_decimal p1 = {0};  // 1.373 2
+  s21_decimal p2 = {0}; // 1 0
+  s21_decimal result = {0};
 
-  // s21_add(p1, p2, &result);
-  // printf("%d\n", result.bits[0]);
-  // printf("%d\n", result.bits[1]);
-  // printf("%d\n", result.bits[2]);
-  // printf("%d\n\n", result.bits[3]);
+  // s21_from_float_to_decimal(12.25, &p1);
+  // s21_from_float_to_decimal(10.75, &p2);
+
+  s21_from_int_to_decimal(10, &p1);
+  s21_from_int_to_decimal(31, &p2);
+
+  s21_add(p1, p2, &result);
+  printf("%d\n", result.bits[0]);
+  printf("%d\n", result.bits[1]);
+  printf("%d\n", result.bits[2]);
+  printf("%d\n", result.bits[3]);
 
 
   // float dst = 0;
   // s21_from_decimal_to_float(result, &dst);
   // printf("%f\n", dst);
 
-  s21_decimal result = {0};
-
-  float a = 123345764.1;
-  s21_from_float_to_decimal(a, &result);
-
-  printf("%d\n", result.bits[0]);
-  printf("%d\n", result.bits[1]);
-  printf("%d\n", result.bits[2]);
-  printf("%d\n", result.bits[3]);
-  
+  // s21_decimal result = {0};
+// 
+  // float a = 123345764.1;
+  // s21_from_float_to_decimal(a, &result);
+// 
+  // printf("%d\n", result.bits[0]);
+  // printf("%d\n", result.bits[1]);
+  // printf("%d\n", result.bits[2]);
+  // printf("%d\n", result.bits[3]);
+  // 
+// 
+  // __turn_info_into_decimal__(2, 1, &result);
 
   // printf("%d\n", s21_is_greater(p1, p2));
 
@@ -377,6 +385,12 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   int million = 1000000;
   int shift = 0;
 
+  //
+ 
+  int minus = 0;
+
+  //
+
   if (src < million * 10) {
     while (src < million) {
       src *= 10;
@@ -394,6 +408,8 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
 
   s21_from_int_to_decimal((int) src, dst);
 
+  __turn_info_into_decimal__(shift, minus, dst);
+
 }
 
 int s21_from_int_to_decimal(int src, s21_decimal *dst) {
@@ -403,4 +419,22 @@ int s21_from_int_to_decimal(int src, s21_decimal *dst) {
   dst -> bits[2] = src;
 
   return 0;
+}
+
+void __turn_info_into_decimal__(int position, int minus, s21_decimal *dst) {
+  _Bool __binary1__[32] = {false};
+
+  for (int i = 7; i >= 0; i--) {
+    __binary1__[16 - i] = (position - i >= 0) ? 1: 0;    
+    position = (position - i >= 0) ? position - i: position; 
+  }
+
+  __binary1__[1] = minus ? 1: 0;
+
+  int decimal = 0;
+
+  for (int i = 31; i >= 0; i--) {
+    decimal += __binary1__[i] * pow(2, 31 - i);
+  }
+  dst -> bits[3] = decimal;
 }
