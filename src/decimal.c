@@ -16,40 +16,46 @@ int main() {
   // }
   // s21_mul(p1, p2, &p3);
 
-
-
-  s21_decimal p1 = {0};  // 1.373 2
-  s21_decimal p2 = {0}; // 1 0
+  s21_decimal p1 = {1235712311, 612, 1279, 0}; // 1.373 2
+  s21_decimal p2 = {0, 1, 4, 0}; // 1 0
   s21_decimal result = {0};
 
-  // s21_from_float_to_decimal(12.25, &p1);
-  // s21_from_float_to_decimal(10.75, &p2);
 
-  s21_from_int_to_decimal(10, &p1);
-  s21_from_int_to_decimal(31, &p2);
+  __turn_info_into_decimal__(28, 0, &p1);
+  __turn_info_into_decimal__(5, 0, &p2);
 
-  s21_add(p1, p2, &result);
-  printf("%d\n", result.bits[0]);
-  printf("%d\n", result.bits[1]);
-  printf("%d\n", result.bits[2]);
-  printf("%d\n", result.bits[3]);
+  __div_decimal__(p1, NULL, NULL);
+  // __div_decimal__(p2, NULL, NULL);
+  // s21_from_float_to_decimal(21.1, &p1);
+  // s21_from_float_to_decimal(5, &p2);
 
+  // s21_from_int_to_decimal(10, &p1);
+  // s21_from_int_to_decimal(31, &p2);
+
+  // s21_add(p1, p2, &result);
+  // printf("%d\n", result.bits[0]);
+  // printf("%d\n", result.bits[1]);
+  // printf("%d\n", result.bits[2]);
+
+  // s21_decimal_info info = {0};
+  // __take_info__(&info, result);
+  // printf("%d\n", info.position);
 
   // float dst = 0;
   // s21_from_decimal_to_float(result, &dst);
   // printf("%f\n", dst);
 
   // s21_decimal result = {0};
-// 
+  //
   // float a = 123345764.1;
   // s21_from_float_to_decimal(a, &result);
-// 
+  //
   // printf("%d\n", result.bits[0]);
   // printf("%d\n", result.bits[1]);
   // printf("%d\n", result.bits[2]);
   // printf("%d\n", result.bits[3]);
-  // 
-// 
+  //
+  //
   // __turn_info_into_decimal__(2, 1, &result);
 
   // printf("%d\n", s21_is_greater(p1, p2));
@@ -102,17 +108,27 @@ void convert_binary_into_decimal(_Bool *value, s21_decimal *result) {
   }
 }
 
-int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-  _Bool __binary1__[96] = {false};
-  _Bool __binary2__[96] = {false};
+void __fix_position__(_Bool *__binary1__, _Bool *__binary2__,
+                      s21_decimal_info info_1, s21_decimal_info info_2) {
+  if (info_1.position != 0 || info_2.position != 0) {
+    if (info_1.position > info_2.position) {
+      for (int i = 0; i != 96 - (info_1.position - info_2.position); i++) {
+        __binary2__[i] = __binary2__[i + (info_1.position - info_2.position)];
+        __binary2__[i + (info_1.position - info_2.position)] = 0;
+      }
+    } else if (info_1.position < info_2.position) {
 
-  for (int i = 0; i != 3; i++) {
-    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
-    perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
+      for (int i = 0; i != 96 - (info_2.position - info_1.position); i++) {
+        __binary1__[i] = __binary1__[i + (info_2.position - info_1.position)];
+        __binary1__[i + (info_2.position - info_1.position)] = 0;
+      }
+
+    }
   }
+}
 
-  _Bool __result__[96] = {false};
-
+void fix_position(_Bool *__binary1__, _Bool *__binary2__, s21_decimal value_1,
+                  s21_decimal value_2, s21_decimal *result) {
   s21_decimal_info info_1 = {0};
   s21_decimal_info info_2 = {0};
 
@@ -126,19 +142,52 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
   // Возможно придется фиксить
 
-  if (info_1.position != 0 || info_2.position != 0) {
-    if (info_1.position > info_2.position) {
-      for (int i = info_1.position - info_2.position; i != 96; i++) {
-        __binary2__[i] = __binary2__[i + (info_1.position - info_2.position)];
-      }
-    } else if (info_1.position < info_2.position) {
+  __fix_position__(__binary1__, __binary2__, info_1, info_2);
+}
 
-      for (int i = info_2.position - info_1.position; i != 96; i++) {
-        __binary1__[i] = __binary1__[i + (info_2.position - info_1.position)];
-      }
+void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__point__) {
+  s21_decimal_info info = {0};
+  __take_info__(&info, value_1);
+
+  int buffer[30] = {0};
+  int point_pos = info.position;
+  int shift = 2;
+  int coeff = 10;
+  int counter = 0;
+  int pos = 29;
+
+  s21_decimal copy = value_1;
+
+  while (pos != -1) {
+
+    buffer[pos] = copy.bits[shift] % coeff;
+    copy.bits[shift] /= 10;
+    counter++;
+    pos--;
+
+    if (counter == 10) {
+      shift--;
+      counter = 0;
     }
   }
 
+  for (int i = 0; i != 30; i++) {
+    printf("%d\n", buffer[i]);
+  }
+
+}
+
+int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+  _Bool __binary1__[96] = {false};
+  _Bool __binary2__[96] = {false};
+
+  for (int i = 0; i != 3; i++) {
+    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
+    perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
+  }
+
+
+  _Bool __result__[96] = {false};
   __s21_add__(__binary1__, __binary2__, __result__);
 
   convert_binary_into_decimal(__result__, result);
@@ -361,7 +410,6 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
   s21_decimal_info info_1 = {0};
   __take_info__(&info_1, src);
 
-
   _Bool __binary1__[96] = {false};
   for (int i = 0; i != 3; i++) {
     perform_decimal_into_binary(src.bits[i], i + 1, __binary1__);
@@ -386,7 +434,7 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   int shift = 0;
 
   //
- 
+
   int minus = 0;
 
   //
@@ -396,27 +444,31 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
       src *= 10;
       shift++;
     }
+
+    src += (src - (int)src) >= 0.5 ? 1 : 0;
+
+    while ((int)src % 10 == 0) {
+      src /= 10;
+      shift--;
+    }
+
   } else {
     while (src > million * 10) {
       src /= 10;
     }
+    src += (src - (int)src) >= 0.5 ? 1 : 0;
   }
 
-  if ((src - (int) src) >= 0.5) {
-    src += 1.0;
-  }
-
-  s21_from_int_to_decimal((int) src, dst);
+  s21_from_int_to_decimal((int)src, dst);
 
   __turn_info_into_decimal__(shift, minus, dst);
-
 }
 
 int s21_from_int_to_decimal(int src, s21_decimal *dst) {
 
   // надо добавить минус
 
-  dst -> bits[2] = src;
+  dst->bits[2] = src;
 
   return 0;
 }
@@ -425,16 +477,16 @@ void __turn_info_into_decimal__(int position, int minus, s21_decimal *dst) {
   _Bool __binary1__[32] = {false};
 
   for (int i = 7; i >= 0; i--) {
-    __binary1__[16 - i] = (position - i >= 0) ? 1: 0;    
-    position = (position - i >= 0) ? position - i: position; 
+    __binary1__[16 - i] = (position - i >= 0) ? 1 : 0;
+    position = (position - i >= 0) ? position - i : position;
   }
 
-  __binary1__[1] = minus ? 1: 0;
+  __binary1__[1] = minus ? 1 : 0;
 
   int decimal = 0;
 
   for (int i = 31; i >= 0; i--) {
     decimal += __binary1__[i] * pow(2, 31 - i);
   }
-  dst -> bits[3] = decimal;
+  dst->bits[3] = decimal;
 }

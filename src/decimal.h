@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <stdbool.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #define MINIMUM_INT -2147483648
 #define MAXIMUM_INT 2147483647
@@ -14,8 +14,8 @@ typedef struct {
   int minus;
 } s21_decimal_info;
 
-void perform_decimal_into_binary(int number, int bits, _Bool* __binary__);
-void __converter__(int number, _Bool* __binary__);
+void perform_decimal_into_binary(int number, int bits, _Bool *__binary__);
+void __converter__(int number, _Bool *__binary__);
 void convert_binary_into_decimal(_Bool *value, s21_decimal *result);
 int __predict_len__(int number);
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
@@ -27,10 +27,15 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int __s21_div__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__);
 int s21_mod(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 void __take_info__(s21_decimal_info *info, s21_decimal value_1);
-
+void __fix_position__(_Bool *__binary1__, _Bool *__binary2__,
+                      s21_decimal_info info_1, s21_decimal_info info_2);
+void fix_position(_Bool *__binary1__, _Bool *__binary2__, s21_decimal value_1,
+                  s21_decimal value_2, s21_decimal *result);
+void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__point__);
 
 int s21_is_greater_or_equal(s21_decimal value_1, s21_decimal value_2);
-int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__, int return_value);
+int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__,
+                                int return_value);
 int s21_is_equal(s21_decimal value_1, s21_decimal value_2);
 int __s21_is_equal__(_Bool *__binary1__, _Bool *__binary2__, int return_value);
 int s21_is_less(s21_decimal value_1, s21_decimal value_2);
