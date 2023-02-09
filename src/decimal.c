@@ -69,17 +69,19 @@ int main() {
   // 1000001100011011010100000011011110
 
   int __int1__[30] = {0};
-  __int1__[29] = 2;
-  __int1__[28] = 4;
-  __int1__[27] = 4;
-  __int1__[26] = 1;
+  __int1__[29] = 8;
+  __int1__[28] = 9;
+  __int1__[27] = 9;
+  __int1__[26] = 9;
 
   int __int2__[30] = {0};
-  __int2__[29] = 5;
-  __int2__[28] = 5;
-  __int2__[27] = 5;
+  __int2__[29] = 9;
+  __int2__[28] = 9;
+  __int2__[27] = 9;
+  __int2__[26] = 9;
 
-  ______div_decimal_sub______(__int1__, __int2__, NULL);
+  // ______div_decimal_sub______(__int1__, __int2__, NULL);
+  printf("%d\n", __div_decimal_higher_or_equal__(__int1__, __int2__));
   return 0;
 }
 
@@ -180,7 +182,7 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
       ______div_decimal_add______(decimal, temp_double, decimal);
     }
   }
-  
+
   s21_decimal_info info = {0};
   __take_info__(&info, value_1);
   for (int i = 0; i < 30 - info.position; i++) {
@@ -192,7 +194,6 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
   for (int i = 30 - info.position; i != 30; i++) {
     printf("%d\n", decimal[i]);
   }
-
 }
 
 void ____div_decimal_pow____(int *__int1__, int power, int *__result__) {
@@ -214,8 +215,8 @@ void ______div_decimal_add______(int *__int1__, int *__int2__,
   int buf[30] = {0};
   for (int i = 29; i >= 0; i--) {
     buf[i] = __int1__[i] + __int2__[i] + k >= 10
-                        ? (__int1__[i] + __int2__[i] + k) % 10
-                        : __int1__[i] + __int2__[i] + k;
+                 ? (__int1__[i] + __int2__[i] + k) % 10
+                 : __int1__[i] + __int2__[i] + k;
     k = __int1__[i] + __int2__[i] + k >= 10 ? 1 : 0;
   }
   for (int i = 0; i != 30; i++) {
@@ -231,15 +232,36 @@ void ______div_decimal_sub______(int *__int1__, int *__int2__,
 
   for (int i = 29; i >= 0; i--) {
 
-    buf[i] = (__int1__[i] - __int2__[i] - k) >= 0 ? __int1__[i] - __int2__[i] - k: (10 + __int1__[i]) - __int2__[i] - k;
-    k = __int1__[i] - __int2__[i] < 0 ? 1: 0;
-
+    buf[i] = (__int1__[i] - __int2__[i] - k) >= 0
+                 ? __int1__[i] - __int2__[i] - k
+                 : (10 + __int1__[i]) - __int2__[i] - k;
+    k = __int1__[i] - __int2__[i] < 0 ? 1 : 0;
   }
 
   for (int i = 0; i != 30; i++) {
     printf("%d\n", buf[i]);
   }
+}
 
+int __div_decimal_higher_or_equal__(int *__int1__, int *__int2__) {
+  int return_value = 0;
+  for (int i = 0; i != 30; i++) {
+    if (__int1__[i] == __int2__[i] && i == 29) {
+      return_value = 1;
+      break;
+    }
+    if ((__int1__[i] && __int2__[i]) != 0) {
+      return_value = __int1__[i] > __int2__[i] ? 1 : 0;
+      if (__int1__[i] == __int2__[i]) {
+        continue;
+      }
+      break;
+    } else if (__int1__[i] != 0 || __int2__[i] != 0) {
+      return_value = __int1__[i] != 0 ? 1 : 0;
+      break;
+    }
+  }
+  return return_value;
 }
 
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {

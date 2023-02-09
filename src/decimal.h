@@ -35,6 +35,7 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__p
 void ____div_decimal_pow____(int *__int1__, int power, int *__result__);
 void ______div_decimal_add______(int *__int1__, int *__int2__, int *__result__);
 void ______div_decimal_sub______(int *__int1__, int *__int2__, int *__result__);
+int __div_decimal_higher_or_equal__(int *__int1__, int *__int2__);
 
 int s21_is_greater_or_equal(s21_decimal value_1, s21_decimal value_2);
 int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__,
