@@ -68,20 +68,29 @@ int main() {
   // 10    1100011011010100000011011110
   // 1000001100011011010100000011011110
 
-  int __int1__[30] = {0};
-  __int1__[29] = 8;
-  __int1__[28] = 9;
-  __int1__[27] = 9;
-  __int1__[26] = 9;
+  // int __int1__[30] = {0};
+  // __int1__[29] = 8;
+  // __int1__[28] = 0;
+  // __int1__[27] = 0;
+  // __int1__[26] = 0;
 
   int __int2__[30] = {0};
-  __int2__[29] = 9;
+  __int2__[29] = 7;
   __int2__[28] = 9;
   __int2__[27] = 9;
   __int2__[26] = 9;
 
+  _Bool __binary1__[96] = {0};
+  __div_perform_back__(__int2__, __binary1__);
+
+  for (int i = 80; i != 96; i++) {
+    printf("%d\n", __binary1__[i]);
+  }
+
   // ______div_decimal_sub______(__int1__, __int2__, NULL);
-  printf("%d\n", __div_decimal_higher_or_equal__(__int1__, __int2__));
+  // printf("%d\n", __div_decimal_higher_or_equal__(__int1__, __int2__));
+
+
   return 0;
 }
 
@@ -194,6 +203,8 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
   for (int i = 30 - info.position; i != 30; i++) {
     printf("%d\n", decimal[i]);
   }
+
+  
 }
 
 void ____div_decimal_pow____(int *__int1__, int power, int *__result__) {
@@ -226,12 +237,9 @@ void ______div_decimal_add______(int *__int1__, int *__int2__,
 
 void ______div_decimal_sub______(int *__int1__, int *__int2__,
                                  int *__result__) {
-
   int k = 0;
   int buf[30] = {0};
-
   for (int i = 29; i >= 0; i--) {
-
     buf[i] = (__int1__[i] - __int2__[i] - k) >= 0
                  ? __int1__[i] - __int2__[i] - k
                  : (10 + __int1__[i]) - __int2__[i] - k;
@@ -239,7 +247,7 @@ void ______div_decimal_sub______(int *__int1__, int *__int2__,
   }
 
   for (int i = 0; i != 30; i++) {
-    printf("%d\n", buf[i]);
+    __result__[i] = buf[i];
   }
 }
 
@@ -262,6 +270,23 @@ int __div_decimal_higher_or_equal__(int *__int1__, int *__int2__) {
     }
   }
   return return_value;
+}
+
+void __div_perform_back__(int *__int1__, _Bool *__binary1__) {
+
+  int div_decimal[30] = {0};
+  for (int i = 0; i != 96; i++) {
+    for (int j = 0; j != 29; j++) {
+      div_decimal[j] = 0;
+    }
+    div_decimal[29] = 2;
+    ____div_decimal_pow____(div_decimal, 95 - i, div_decimal);
+    if (__div_decimal_higher_or_equal__(__int1__, div_decimal)) {
+      __binary1__[i] = 1;
+      ______div_decimal_sub______(__int1__, div_decimal, __int1__);
+    }
+  }
+
 }
 
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
