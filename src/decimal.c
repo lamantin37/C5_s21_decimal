@@ -16,15 +16,20 @@ int main() {
   // }
   // s21_mul(p1, p2, &p3);
 
-  s21_decimal p1 = {1235712311, 612, 1279, 0}; // 1.373 2
-  s21_decimal p2 = {0, 1, 4, 0}; // 1 0
-  s21_decimal result = {0};
+  // s21_decimal p1 = {1235712311, 612, 1279, 0}; // 1.373 2
+  // s21_decimal p2 = {0, 1, 4, 0}; // 1 0
+  // s21_decimal result = {0};
 
+  // __turn_info_into_decimal__(28, 0, &p1);
+  // __turn_info_into_decimal__(5, 0, &p2);
 
-  __turn_info_into_decimal__(28, 0, &p1);
-  __turn_info_into_decimal__(5, 0, &p2);
+  // __div_decimal__(p1, NULL, NULL);
 
-  __div_decimal__(p1, NULL, NULL);
+  // s21_decimal p1 = {MINIMUM_INT, MINIMUM_INT, MINIMUM_INT, 0};
+  // __turn_info_into_decimal__(5, 0, &p1);
+
+  // __div_decimal__(p1, NULL, NULL);
+
   // __div_decimal__(p2, NULL, NULL);
   // s21_from_float_to_decimal(21.1, &p1);
   // s21_from_float_to_decimal(5, &p2);
@@ -62,6 +67,19 @@ int main() {
 
   // 10    1100011011010100000011011110
   // 1000001100011011010100000011011110
+
+  int __int1__[30] = {0};
+  __int1__[29] = 2;
+  __int1__[28] = 4;
+  __int1__[27] = 4;
+  __int1__[26] = 1;
+
+  int __int2__[30] = {0};
+  __int2__[29] = 5;
+  __int2__[28] = 5;
+  __int2__[27] = 5;
+
+  ______div_decimal_sub______(__int1__, __int2__, NULL);
   return 0;
 }
 
@@ -122,7 +140,6 @@ void __fix_position__(_Bool *__binary1__, _Bool *__binary2__,
         __binary1__[i] = __binary1__[i + (info_2.position - info_1.position)];
         __binary1__[i + (info_2.position - info_1.position)] = 0;
       }
-
     }
   }
 }
@@ -145,34 +162,82 @@ void fix_position(_Bool *__binary1__, _Bool *__binary2__, s21_decimal value_1,
   __fix_position__(__binary1__, __binary2__, info_1, info_2);
 }
 
-void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__point__) {
+void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
+                     s21_decimal *__point__) {
+  _Bool __binary1__[96] = {false};
+  for (int i = 0; i != 3; i++) {
+    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
+  }
+  int decimal[30] = {0};
+  int temp_double[30] = {0};
+  for (int i = 0; i != 96; i++) {
+    if (__binary1__[95 - i]) {
+      for (int i = 0; i != 30; i++) {
+        temp_double[i] = 0;
+      }
+      temp_double[29] = 2;
+      ____div_decimal_pow____(temp_double, i, temp_double);
+      ______div_decimal_add______(decimal, temp_double, decimal);
+    }
+  }
+  
   s21_decimal_info info = {0};
   __take_info__(&info, value_1);
+  for (int i = 0; i < 30 - info.position; i++) {
+    printf("%d\n", decimal[i]);
+  }
 
-  int buffer[30] = {0};
-  int point_pos = info.position;
-  int shift = 2;
-  int coeff = 10;
-  int counter = 0;
-  int pos = 29;
+  printf("\n");
 
-  s21_decimal copy = value_1;
+  for (int i = 30 - info.position; i != 30; i++) {
+    printf("%d\n", decimal[i]);
+  }
 
-  while (pos != -1) {
+}
 
-    buffer[pos] = copy.bits[shift] % coeff;
-    copy.bits[shift] /= 10;
-    counter++;
-    pos--;
-
-    if (counter == 10) {
-      shift--;
-      counter = 0;
+void ____div_decimal_pow____(int *__int1__, int power, int *__result__) {
+  if (power) {
+    for (int i = 0; i < power - 1; i++) {
+      ______div_decimal_add______(__int1__, __int1__, __int1__);
     }
+    for (int j = 0; j != 30; j++) {
+      __result__[j] = __int1__[j];
+    }
+  } else {
+    __result__[29] = 1;
+  }
+}
+
+void ______div_decimal_add______(int *__int1__, int *__int2__,
+                                 int *__result__) {
+  int k = 0;
+  int buf[30] = {0};
+  for (int i = 29; i >= 0; i--) {
+    buf[i] = __int1__[i] + __int2__[i] + k >= 10
+                        ? (__int1__[i] + __int2__[i] + k) % 10
+                        : __int1__[i] + __int2__[i] + k;
+    k = __int1__[i] + __int2__[i] + k >= 10 ? 1 : 0;
+  }
+  for (int i = 0; i != 30; i++) {
+    __result__[i] = buf[i];
+  }
+}
+
+void ______div_decimal_sub______(int *__int1__, int *__int2__,
+                                 int *__result__) {
+
+  int k = 0;
+  int buf[30] = {0};
+
+  for (int i = 29; i >= 0; i--) {
+
+    buf[i] = (__int1__[i] - __int2__[i] - k) >= 0 ? __int1__[i] - __int2__[i] - k: (10 + __int1__[i]) - __int2__[i] - k;
+    k = __int1__[i] - __int2__[i] < 0 ? 1: 0;
+
   }
 
   for (int i = 0; i != 30; i++) {
-    printf("%d\n", buffer[i]);
+    printf("%d\n", buf[i]);
   }
 
 }
@@ -185,7 +250,6 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
     perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
   }
-
 
   _Bool __result__[96] = {false};
   __s21_add__(__binary1__, __binary2__, __result__);
