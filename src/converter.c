@@ -24,7 +24,7 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
   s21_decimal_info info = {0};
   __take_info__(&info, value_1);
   for (int i = 0; i < 30 - info.position; i++) {
-    temp_decimal[i] = decimal[i];
+    temp_decimal[i + info.position] = decimal[i];
   }
 
   __div_perform_back__(temp_decimal, _temp_binary_decimal);
@@ -43,6 +43,7 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
 
   __div_perform_back__(temp_decimal, _temp_binary_decimal);
   convert_binary_into_decimal(_temp_binary_decimal, __point__);
+  __turn_info_into_decimal__(info.position, 0, __point__);
 }
 
 void ____div_decimal_pow____(int *__int1__, int power, int *__result__) {

@@ -9,22 +9,16 @@
 
 int main() {
 
+  s21_decimal p1 = {0, 0, 1275, 0};
+  s21_decimal p2 = {0, 0, 12523, 0};
+  s21_decimal result = {0, 0, 1250, 0};
 
-  s21_decimal p1 = {0, 0, 12345, 0};
-  s21_decimal _int = {0, 0, 0, 0};
-  s21_decimal _point = {0, 0, 0, 0};
 
-  __turn_info_into_decimal__(15, 0, &p1);
+  // полохо обрабатывает в случаях с нулевой точностью одного из децимал
+  __turn_info_into_decimal__(1, 0, &p1);
+  __turn_info_into_decimal__(0, 0, &p2);
 
-  __div_decimal__(p1, &_int, &_point);
-
-  for (int i = 0; i != 4; i++) {
-    printf("%d\n", _int.bits[i]);
-  }
-  printf("\n");
-  for (int i = 0; i != 4; i++) {
-    printf("%d\n", _point.bits[i]);
-  }
+  s21_add(p1, p2, &result);
 
   return 0;
 }
@@ -109,18 +103,81 @@ void fix_position(_Bool *__binary1__, _Bool *__binary2__, s21_decimal value_1,
 }
 
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-  _Bool __binary1__[96] = {false};
-  _Bool __binary2__[96] = {false};
 
-  for (int i = 0; i != 3; i++) {
-    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
-    perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
+  s21_decimal_info info_1 = {0};
+  __take_info__(&info_1, value_1);
+  s21_decimal_info info_2 = {0};
+  __take_info__(&info_2, value_2);
+
+  if (info_1.position == 0 && info_2.position == 0) {
+    _Bool __binary1__[96] = {false};
+    _Bool __binary2__[96] = {false};
+    _Bool __result__[96] = {false};
+    for (int i = 0; i != 3; i++) {
+      perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
+      perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
+    }
+    __s21_add__(__binary1__, __binary2__, __result__);
+    convert_binary_into_decimal(__result__, result);
+  } else {
+    s21_decimal _int_1 = {0, 0, 0, 0};
+    s21_decimal _point_1 = {0, 0, 0, 0};
+    s21_decimal _int_2 = {0, 0, 0, 0};
+    s21_decimal _point_2 = {0, 0, 0, 0};
+
+    __div_decimal__(value_1, &_int_1, &_point_1);
+    __div_decimal__(value_2, &_int_2, &_point_2);
+
+    ////////
+    for (int i = 0; i != 3; i++) {
+      printf("%d\n", _int_1.bits[i]);
+    }
+    printf("\n");
+    for (int i = 0; i != 3; i++) {
+      printf("%d\n", _int_2.bits[i]);
+    }
+    printf("\n");
+    ////////
+
+    _Bool __binary1__[96] = {false};
+    _Bool __binary2__[96] = {false};
+    _Bool __result__[96] = {false};
+    for (int i = 0; i != 3; i++) {
+      perform_decimal_into_binary(_int_1.bits[i], i + 1, __binary1__);
+      perform_decimal_into_binary(_int_2.bits[i], i + 1, __binary2__);
+    }
+    __s21_add__(__binary1__, __binary2__, __result__);
+    convert_binary_into_decimal(__result__, result);
+
+
+    ////////
+    for (int i = 0; i != 3; i++) {
+      printf("%d\n", result->bits[i]);
+    }
+    ////////
+
+    for (int i = 0; i != 96; i++) {
+      __binary1__[i] = 0;
+      __binary2__[i] = 0;
+      __result__[i] = 0;
+    }
+
+    for (int i = 0; i != 3; i++) {
+      perform_decimal_into_binary(_point_1.bits[i], i + 1, __binary1__);
+      perform_decimal_into_binary(_point_2.bits[i], i + 1, __binary2__);
+    }
+    fix_position(__binary1__, __binary2__, _point_1, _point_2, result);
+    __s21_add__(__binary1__, __binary2__, __result__);
+    convert_binary_into_decimal(__result__, result);
+
+    ////////
+    for (int i = 0; i != 3; i++) {
+      printf("%d\n", result->bits[i]);
+    }
+    ////////
+
+
   }
-
-  _Bool __result__[96] = {false};
-  __s21_add__(__binary1__, __binary2__, __result__);
-
-  convert_binary_into_decimal(__result__, result);
 }
 
 void __s21_add__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
