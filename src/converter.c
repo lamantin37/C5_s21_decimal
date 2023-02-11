@@ -44,7 +44,7 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
 
   if (position > info.position) {
     for (int i = info.position; i != 30; i++) {
-      temp_decimal[i - info.position + 1] = temp_decimal[i];
+      temp_decimal[i - (position - info.position)] = temp_decimal[i];
       temp_decimal[i] = 0;
     }
   }

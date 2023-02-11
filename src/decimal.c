@@ -9,13 +9,13 @@
 
 int main() {
 
-  s21_decimal p1 = {0, 0, 8, 0};
-  s21_decimal p2 = {0, 0, 16, 0};
+  s21_decimal p1 = {0, 0, 999, 0};
+  s21_decimal p2 = {0, 0, 1, 0};
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(1, 0, &p1);
-  __turn_info_into_decimal__(2, 0, &p2);
+  __turn_info_into_decimal__(3, 0, &p1);
+  __turn_info_into_decimal__(3, 0, &p2);
 
   s21_add(p1, p2, &result);
 
@@ -152,15 +152,11 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       perform_decimal_into_binary(_point_2.bits[i], i + 1, __binary2__);
     }
 
-    // ГДЕ-ТО ЗДЕСЬ ЛАЖА
-
     result->bits[3] =
         info_1.position > info_2.position ? value_1.bits[3] : value_2.bits[3];
 
     __s21_add__(__binary1__, __binary2__, __result_point__);
     convert_binary_into_decimal(__result_point__, &_result_point);
-
-    // ГДЕ-ТО ЗДЕСЬ ЛАЖА
 
     // convert two decimals into binary format
 
