@@ -37,7 +37,6 @@ void ______div_decimal_add______(int *__int1__, int *__int2__, int *__result__);
 void ______div_decimal_sub______(int *__int1__, int *__int2__, int *__result__);
 int __div_decimal_higher_or_equal__(int *__int1__, int *__int2__);
 void __div_perform_back__(int *__int1__, _Bool *__binary1__);
-
 int s21_is_greater_or_equal(s21_decimal value_1, s21_decimal value_2);
 int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__,
                                 int return_value);
@@ -47,10 +46,7 @@ int s21_is_less(s21_decimal value_1, s21_decimal value_2);
 int s21_is_not_equal(s21_decimal value_1, s21_decimal value_2);
 int s21_is_greater(s21_decimal value_1, s21_decimal value_2);
 int s21_is_less_or_equal(s21_decimal value_1, s21_decimal value_2);
-
 int s21_from_decimal_to_float(s21_decimal src, float *dst);
 int s21_from_float_to_decimal(float src, s21_decimal *dst);
-
 int s21_from_int_to_decimal(int src, s21_decimal *dst);
-
 void __turn_info_into_decimal__(int position, int minus, s21_decimal *dst);

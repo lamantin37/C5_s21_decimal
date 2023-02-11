@@ -82,7 +82,7 @@ void ______div_decimal_sub______(int *__int1__, int *__int2__,
     buf[i] = (__int1__[i] - __int2__[i] - k) >= 0
                  ? __int1__[i] - __int2__[i] - k
                  : (10 + __int1__[i]) - __int2__[i] - k;
-    k = __int1__[i] - __int2__[i] < 0 ? 1 : 0;
+    k = __int1__[i] - __int2__[i] - k < 0 ? 1 : 0;
   }
 
   for (int i = 0; i != 30; i++) {
@@ -115,7 +115,7 @@ void __div_perform_back__(int *__int1__, _Bool *__binary1__) {
 
   int div_decimal[30] = {0};
   for (int i = 0; i != 96; i++) {
-    for (int j = 0; j != 29; j++) {
+    for (int j = 0; j != 30; j++) {
       div_decimal[j] = 0;
     }
     div_decimal[29] = 2;
@@ -125,5 +125,4 @@ void __div_perform_back__(int *__int1__, _Bool *__binary1__) {
       ______div_decimal_sub______(__int1__, div_decimal, __int1__);
     }
   }
-
 }
