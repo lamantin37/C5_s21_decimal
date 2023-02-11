@@ -266,7 +266,6 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 }
 
 void __s21_sub__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
-
   int k, p = 0;
   for (int i = 95; i != -1; i--) {
     k = __binary1__[i] - __binary2__[i] + p;
