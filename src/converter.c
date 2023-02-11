@@ -1,7 +1,7 @@
 #include "decimal.h"
 
 void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
-                     s21_decimal *__point__) {
+                     s21_decimal *__point__, int position) {
   _Bool __binary1__[96] = {false};
   for (int i = 0; i != 3; i++) {
     perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
@@ -33,12 +33,20 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
   for (int i = 0; i != 30; i++) {
     temp_decimal[i] = 0;
   }
+
   for (int i = 0; i != 96; i++) {
     _temp_binary_decimal[i] = 0;
   }
 
   for (int i = 30 - info.position; i != 30; i++) {
     temp_decimal[i] = decimal[i];
+  }
+
+  if (position > info.position) {
+    for (int i = info.position; i != 30; i++) {
+      temp_decimal[i - info.position + 1] = temp_decimal[i];
+      temp_decimal[i] = 0;
+    }
   }
 
   __div_perform_back__(temp_decimal, _temp_binary_decimal);

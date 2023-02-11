@@ -9,13 +9,13 @@
 
 int main() {
 
-  s21_decimal p1 = {0, 0, 256, 0};
-  s21_decimal p2 = {0, 0, 256, 0};
+  s21_decimal p1 = {0, 0, 8, 0};
+  s21_decimal p2 = {0, 0, 16, 0};
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(2, 0, &p1);
-  __turn_info_into_decimal__(3, 0, &p2);
+  __turn_info_into_decimal__(1, 0, &p1);
+  __turn_info_into_decimal__(2, 0, &p2);
 
   s21_add(p1, p2, &result);
 
@@ -86,42 +86,6 @@ void convert_binary_into_decimal(_Bool *value, s21_decimal *result) {
   }
 }
 
-void __fix_position__(_Bool *__binary1__, _Bool *__binary2__,
-                      s21_decimal_info info_1, s21_decimal_info info_2) {
-  if (info_1.position != 0 || info_2.position != 0) {
-    if (info_1.position > info_2.position) {
-      for (int i = 0; i != 96 - (info_1.position - info_2.position); i++) {
-        __binary2__[i] = __binary2__[i + (info_1.position - info_2.position)];
-        __binary2__[i + (info_1.position - info_2.position)] = 0;
-      }
-    } else if (info_1.position < info_2.position) {
-
-      for (int i = 0; i != 96 - (info_2.position - info_1.position); i++) {
-        __binary1__[i] = __binary1__[i + (info_2.position - info_1.position)];
-        __binary1__[i + (info_2.position - info_1.position)] = 0;
-      }
-    }
-  }
-}
-
-void fix_position(_Bool *__binary1__, _Bool *__binary2__, s21_decimal value_1,
-                  s21_decimal value_2, s21_decimal *result) {
-  s21_decimal_info info_1 = {0};
-  s21_decimal_info info_2 = {0};
-
-  __take_info__(&info_1, value_1);
-  __take_info__(&info_2, value_2);
-
-  // Возможно придется фиксить
-
-  result->bits[3] =
-      info_1.position > info_2.position ? value_1.bits[3] : value_2.bits[3];
-
-  // Возможно придется фиксить
-
-  __fix_position__(__binary1__, __binary2__, info_1, info_2);
-}
-
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
   s21_decimal_info info_1 = {0};
@@ -148,8 +112,20 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     s21_decimal _result_int = {0, 0, 0, 0};
     s21_decimal _result_point = {0, 0, 0, 0};
 
-    __div_decimal__(value_1, &_int_1, &_point_1);
-    __div_decimal__(value_2, &_int_2, &_point_2);
+    if (info_1.position != 0) {
+      __div_decimal__(value_1, &_int_1, &_point_1,
+                      info_1.position > info_2.position ? info_1.position
+                                                        : info_2.position);
+    } else {
+      _int_1 = value_1;
+    }
+    if (info_2.position != 0) {
+      __div_decimal__(value_2, &_int_2, &_point_2,
+                      info_1.position > info_2.position ? info_1.position
+                                                        : info_2.position);
+    } else {
+      _int_2 = value_2;
+    }
 
     // convert int part of decimal
 
@@ -175,9 +151,16 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       perform_decimal_into_binary(_point_1.bits[i], i + 1, __binary1__);
       perform_decimal_into_binary(_point_2.bits[i], i + 1, __binary2__);
     }
-    fix_position(__binary1__, __binary2__, _point_1, _point_2, result);
+
+    // ГДЕ-ТО ЗДЕСЬ ЛАЖА
+
+    result->bits[3] =
+        info_1.position > info_2.position ? value_1.bits[3] : value_2.bits[3];
+
     __s21_add__(__binary1__, __binary2__, __result_point__);
     convert_binary_into_decimal(__result_point__, &_result_point);
+
+    // ГДЕ-ТО ЗДЕСЬ ЛАЖА
 
     // convert two decimals into binary format
 
@@ -218,7 +201,8 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       }
     }
 
-    // convert two 30int arrays into an array of b10 notation, representation of decimal
+    // convert two 30int arrays into an array of b10 notation, representation of
+    // decimal
 
     _Bool _result_position_array[32] = {false};
     perform_decimal_into_binary(result->bits[3], 1, _result_position_array);
@@ -255,7 +239,6 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     // convert binary into decimal
 
     convert_binary_into_decimal(__binary_result, result);
-
   }
 }
 

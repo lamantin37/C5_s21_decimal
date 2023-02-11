@@ -27,11 +27,7 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int __s21_div__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__);
 int s21_mod(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 void __take_info__(s21_decimal_info *info, s21_decimal value_1);
-void __fix_position__(_Bool *__binary1__, _Bool *__binary2__,
-                      s21_decimal_info info_1, s21_decimal_info info_2);
-void fix_position(_Bool *__binary1__, _Bool *__binary2__, s21_decimal value_1,
-                  s21_decimal value_2, s21_decimal *result);
-void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__point__);
+void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__point__, int position);
 void ____div_decimal_pow____(int *__int1__, int power, int *__result__);
 void ______div_decimal_add______(int *__int1__, int *__int2__, int *__result__);
 void ______div_decimal_sub______(int *__int1__, int *__int2__, int *__result__);
