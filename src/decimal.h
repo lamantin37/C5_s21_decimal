@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #define MINIMUM_INT -2147483648
-#define MAXIMUM_INT 2147483647
+#define MAXIMUM_INT 2147483648
 
 typedef struct {
   int bits[4];
@@ -31,6 +31,7 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__p
 void ____div_decimal_pow____(int *__int1__, int power, int *__result__);
 void ______div_decimal_add______(int *__int1__, int *__int2__, int *__result__);
 void ______div_decimal_sub______(int *__int1__, int *__int2__, int *__result__);
+void __div_decimal_convert__(s21_decimal value_1, int *decimal);
 int __div_decimal_higher_or_equal__(int *__int1__, int *__int2__);
 void __div_perform_back__(int *__int1__, _Bool *__binary1__);
 int s21_is_greater_or_equal(s21_decimal value_1, s21_decimal value_2);

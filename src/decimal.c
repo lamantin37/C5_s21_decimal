@@ -9,15 +9,15 @@
 
 int main() {
 
-  s21_decimal p1 = {0, 0, 999, 0};
-  s21_decimal p2 = {0, 0, 1, 0};
+  s21_decimal p1 = {0, 0, 1275, 0};
+  s21_decimal p2 = {0, 0, 118, 0};
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(3, 0, &p1);
-  __turn_info_into_decimal__(3, 0, &p2);
+  __turn_info_into_decimal__(2, 0, &p1);
+  __turn_info_into_decimal__(1, 0, &p2);
 
-  s21_add(p1, p2, &result);
+  s21_sub(p1, p2, &result);
 
   printf("%d\n", result.bits[0]);
   printf("%d\n", result.bits[1]);
@@ -251,18 +251,173 @@ void __s21_add__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
 }
 
 int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-  _Bool __binary1__[96] = {false};
-  _Bool __binary2__[96] = {false};
+  
+  s21_decimal_info info_1 = {0};
+  __take_info__(&info_1, value_1);
+  s21_decimal_info info_2 = {0};
+  __take_info__(&info_2, value_2);
 
-  for (int i = 0; i != 3; i++) {
-    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
-    perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
+  if (info_1.position == 0 && info_2.position == 0) {
+    _Bool __binary1__[96] = {false};
+    _Bool __binary2__[96] = {false};
+    _Bool __result__[96] = {false};
+    for (int i = 0; i != 3; i++) {
+      perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
+      perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
+    }
+    __s21_sub__(__binary1__, __binary2__, __result__);
+    convert_binary_into_decimal(__result__, result);
+  } else {
+    s21_decimal _int_1 = {0, 0, 0, 0};
+    s21_decimal _point_1 = {0, 0, 0, 0};
+    s21_decimal _int_2 = {0, 0, 0, 0};
+    s21_decimal _point_2 = {0, 0, 0, 0};
+
+    s21_decimal _result_int = {0, 0, 0, 0};
+    s21_decimal _result_point = {0, 0, 0, 0};
+
+    if (info_1.position != 0) {
+      __div_decimal__(value_1, &_int_1, &_point_1,
+                      info_1.position > info_2.position ? info_1.position
+                                                        : info_2.position);
+    } else {
+      _int_1 = value_1;
+    }
+    if (info_2.position != 0) {
+      __div_decimal__(value_2, &_int_2, &_point_2,
+                      info_1.position > info_2.position ? info_1.position
+                                                        : info_2.position);
+    } else {
+      _int_2 = value_2;
+    }
+
+    // check if _point_1 required one more 1
+
+    if (s21_is_less(_point_1, _point_2)) {
+        int decimal_point[30] = {0};
+        __div_decimal_convert__(_point_1, decimal_point);
+
+        for (int i = 0; i != 30; i++) {
+          if (decimal_point[i] != 0) {
+            decimal_point[i - 1] = 1;
+            break;
+          }
+        }
+
+        _Bool _temp_binary_decimal[96] = {0};
+        __div_perform_back__(decimal_point, _temp_binary_decimal);
+        convert_binary_into_decimal(_temp_binary_decimal, &_point_1);
+
+        _Bool _binary_decimal_int_1[96] = {0};
+        _Bool _binary_decimal_int_2[96] = {0};
+        _binary_decimal_int_2[95] = 1;
+        for (int i = 0; i != 3; i++) {
+          perform_decimal_into_binary(_int_1.bits[i], i + 1, _binary_decimal_int_1);
+        }
+        __s21_sub__(_binary_decimal_int_1, _binary_decimal_int_2, _binary_decimal_int_1);
+        convert_binary_into_decimal(_binary_decimal_int_1, &_int_1);
+    }
+
+    // convert int part of decimal
+
+    _Bool __binary1__[96] = {false};
+    _Bool __binary2__[96] = {false};
+    _Bool __result_int__[96] = {false};
+    for (int i = 0; i != 3; i++) {
+      perform_decimal_into_binary(_int_1.bits[i], i + 1, __binary1__);
+      perform_decimal_into_binary(_int_2.bits[i], i + 1, __binary2__);
+    }
+    __s21_sub__(__binary1__, __binary2__, __result_int__);
+    convert_binary_into_decimal(__result_int__, &_result_int);
+
+    for (int i = 0; i != 96; i++) {
+      __binary1__[i] = 0;
+      __binary2__[i] = 0;
+    }
+
+    // convert after-point part of decimal
+
+    _Bool __result_point__[96] = {false};
+    for (int i = 0; i != 3; i++) {
+      perform_decimal_into_binary(_point_1.bits[i], i + 1, __binary1__);
+      perform_decimal_into_binary(_point_2.bits[i], i + 1, __binary2__);
+    }
+
+    result->bits[3] =
+        info_1.position > info_2.position ? value_1.bits[3] : value_2.bits[3];
+
+    __s21_sub__(__binary1__, __binary2__, __result_point__);
+    convert_binary_into_decimal(__result_point__, &_result_point);
+
+    // convert two decimals into binary format
+
+    for (int i = 0; i != 96; i++) {
+      __binary1__[i] = 0;
+      __binary2__[i] = 0;
+    }
+
+    for (int i = 0; i != 3; i++) {
+      perform_decimal_into_binary(_result_int.bits[i], i + 1, __binary1__);
+      perform_decimal_into_binary(_result_point.bits[i], i + 1, __binary2__);
+    }
+
+    // covert two binary arrays into two 30int arrays
+
+    int decimal_int[30] = {0};
+    int temp_double[30] = {0};
+    for (int i = 0; i != 96; i++) {
+      if (__binary1__[95 - i]) {
+        for (int i = 0; i != 30; i++) {
+          temp_double[i] = 0;
+        }
+        temp_double[29] = 2;
+        ____div_decimal_pow____(temp_double, i, temp_double);
+        ______div_decimal_add______(decimal_int, temp_double, decimal_int);
+      }
+    }
+
+    int decimal_point[30] = {0};
+    for (int i = 0; i != 96; i++) {
+      if (__binary2__[95 - i]) {
+        for (int i = 0; i != 30; i++) {
+          temp_double[i] = 0;
+        }
+        temp_double[29] = 2;
+        ____div_decimal_pow____(temp_double, i, temp_double);
+        ______div_decimal_add______(decimal_point, temp_double, decimal_point);
+      }
+    }
+
+    // convert two 30int arrays into an array of b10 notation, representation of
+    // decimal
+
+    _Bool _result_position_array[32] = {false};
+    perform_decimal_into_binary(result->bits[3], 1, _result_position_array);
+    int position_result = 0;
+    for (int i = 0; i != 8; i++) {
+      position_result += _result_position_array[9 + i] * (7 - i);
+    }
+
+    // keep convertin'
+
+    int _b10_notation[30] = {0};
+    for (int i = 0; i != 30; i++) {
+      if (i <= 29 - position_result) {
+        _b10_notation[i] = decimal_int[i + position_result];
+      } else {
+        _b10_notation[i] = decimal_point[i];
+      }
+    }
+
+    // perform back into binary format
+
+    _Bool __binary_result[96] = {0};
+    __div_perform_back__(_b10_notation, __binary_result);
+
+    // convert binary into decimal
+
+    convert_binary_into_decimal(__binary_result, result);
   }
-
-  _Bool __result__[96] = {false};
-  __s21_sub__(__binary1__, __binary2__, __result__);
-
-  convert_binary_into_decimal(__result__, result);
 }
 
 void __s21_sub__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {

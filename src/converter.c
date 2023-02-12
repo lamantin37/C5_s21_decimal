@@ -2,22 +2,9 @@
 
 void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
                      s21_decimal *__point__, int position) {
-  _Bool __binary1__[96] = {false};
-  for (int i = 0; i != 3; i++) {
-    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
-  }
+
   int decimal[30] = {0};
-  int temp_double[30] = {0};
-  for (int i = 0; i != 96; i++) {
-    if (__binary1__[95 - i]) {
-      for (int i = 0; i != 30; i++) {
-        temp_double[i] = 0;
-      }
-      temp_double[29] = 2;
-      ____div_decimal_pow____(temp_double, i, temp_double);
-      ______div_decimal_add______(decimal, temp_double, decimal);
-    }
-  }
+  __div_decimal_convert__(value_1, decimal);
 
   _Bool _temp_binary_decimal[96] = {0};
   int temp_decimal[30] = {0};
@@ -52,6 +39,24 @@ void __div_decimal__(s21_decimal value_1, s21_decimal *__int__,
   __div_perform_back__(temp_decimal, _temp_binary_decimal);
   convert_binary_into_decimal(_temp_binary_decimal, __point__);
   __turn_info_into_decimal__(info.position, 0, __point__);
+}
+
+void __div_decimal_convert__(s21_decimal value_1, int *decimal) {
+  _Bool __binary1__[96] = {false};
+  for (int i = 0; i != 3; i++) {
+    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
+  }
+  int temp_double[30] = {0};
+  for (int i = 0; i != 96; i++) {
+    if (__binary1__[95 - i]) {
+      for (int i = 0; i != 30; i++) {
+        temp_double[i] = 0;
+      }
+      temp_double[29] = 2;
+      ____div_decimal_pow____(temp_double, i, temp_double);
+      ______div_decimal_add______(decimal, temp_double, decimal);
+    }
+  }
 }
 
 void ____div_decimal_pow____(int *__int1__, int power, int *__result__) {
