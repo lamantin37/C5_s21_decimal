@@ -9,12 +9,12 @@
 
 int main() {
 
-  s21_decimal p1 = {0, 0, 10128, 0};
-  s21_decimal p2 = {0, 0, 4, 0};
+  s21_decimal p1 = {0, 0, 1234, 0};
+  s21_decimal p2 = {0, 0, 64, 0};
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(4, 0, &p1);
+  __turn_info_into_decimal__(2, 0, &p1);
   __turn_info_into_decimal__(1, 0, &p2);
 
   s21_mul(p1, p2, &result);
@@ -434,62 +434,16 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
   }
 
-  s21_decimal_info info_1 = {0};
-  __take_info__(&info_1, value_1);
-
   _Bool __result__[96] = {false};
 
-  if (info_1.position == 0) {
+  s21_decimal_info info_1 = {0};
+  __take_info__(&info_1, value_1);
+  s21_decimal_info info_2 = {0};
+  __take_info__(&info_2, value_2);
+  __turn_info_into_decimal__(info_1.position + info_2.position, 0, result);
 
-    __s21_mul__(__binary1__, __binary2__, __result__);
-    convert_binary_into_decimal(__result__, result);
-
-  } else {
-
-    s21_decimal _int_1 = {0, 0, 0, 0};
-    s21_decimal _point_1 = {0, 0, 0, 0};
-
-    __div_decimal__(value_1, &_int_1, &_point_1, 0);
-
-    _Bool __binary1_int_[96] = {false};
-    _Bool __binary1_point_[96] = {false};
-    _Bool __binary2__[96] = {false};
-    _Bool __result_int_[96] = {false};
-    _Bool __result_point_[96] = {false};
-
-    for (int i = 0; i != 3; i++) {
-      perform_decimal_into_binary(_int_1.bits[i], i + 1, __binary1_int_);
-      perform_decimal_into_binary(_point_1.bits[i], i + 1, __binary1_point_);
-      perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
-    }
-
-    __s21_mul__(__binary1_int_, __binary2__, __result_int_);
-    __s21_mul__(__binary1_point_, __binary2__, __result_point_);
-
-    convert_binary_into_decimal(__result_int_, &_int_1);
-    convert_binary_into_decimal(__result_point_, &_point_1);
-
-    int decimal_int[30] = {0};
-    __div_decimal_convert__(_int_1, decimal_int);
-    int decimal_point[30] = {0};
-    __div_decimal_convert__(_point_1, decimal_point);
-
-    int _point_position_1[30] = {0};
-    int _point_position_2[30] = {0};
-
-    for (int i = 0; i != 30; i++) {
-      if (i <= 29 - info_1.position) {
-        _point_position_1[i + info_1.position] = decimal_point[i];
-      } else {
-        _point_position_2[i] = decimal_point[i];
-      }
-    }
-
-    ______div_decimal_add______(decimal_int, _point_position_1, decimal_int);
-    result -> bits[3] = value_1.bits[3];
-
-    __div_convert_back(decimal_int, _point_position_2, result, info_1.position);
-  }
+  __s21_mul__(__binary1__, __binary2__, __result__);
+  convert_binary_into_decimal(__result__, result);
 }
 
 void __s21_mul__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
