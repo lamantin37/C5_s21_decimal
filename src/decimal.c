@@ -7,6 +7,8 @@
 // == //
 // != //
 
+#include <string.h>
+
 int main() {
 
   s21_decimal p1 = {0, 0, 1234, 0};
@@ -14,8 +16,8 @@ int main() {
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(2, 0, &p1);
-  __turn_info_into_decimal__(1, 0, &p2);
+  __turn_info_into_decimal__(1, 0, &p1);
+  __turn_info_into_decimal__(0, 0, &p2);
 
   s21_mul(p1, p2, &result);
 
@@ -222,8 +224,7 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   }
 }
 
-// ???? вроде чушь upd 1 // не вроде норм upd 2 // уже не знаю, вроде работает
-// но выглядит как чушь upd 3
+// 
 
 void __div_convert_back(int *decimal_int, int *decimal_point,
                         s21_decimal *result, int position_result) {
@@ -242,8 +243,7 @@ void __div_convert_back(int *decimal_int, int *decimal_point,
   convert_binary_into_decimal(__binary_result, result);
 }
 
-// ???? вроде чушь upd 1 // не вроде норм upd 2 // уже не знаю, вроде работает
-// но выглядит как чушь upd 3
+// 
 
 void __s21_add__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
   int k, p = 0;
