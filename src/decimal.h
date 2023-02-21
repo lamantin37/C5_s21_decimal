@@ -26,6 +26,8 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 void __s21_mul__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__);
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int __s21_div__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__);
+void take_element(_Bool *binary1, _Bool *binary2, _Bool *result);
+void poly_div(_Bool *binary1, _Bool *binary2, _Bool *result);
 int s21_mod(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 void __take_info__(s21_decimal_info *info, s21_decimal value_1);
 void __div_decimal__(s21_decimal value_1, s21_decimal *__int__, s21_decimal *__point__, int position);

@@ -486,6 +486,109 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   convert_binary_into_decimal(__result__, result);
 }
 
+//////////////////////////////////////////////////////////////////
+
+void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
+
+  int max_i = 27;
+
+  const int first_step = 111111;
+
+  // should be cleared //
+
+  static int lenght = first_step;
+  static int max_iter = 0;
+  static int index = 0;
+
+  // should be cleared //
+
+  _Bool tmp[96] = {0};
+  _Bool iter = 0;
+
+  int mask = 0;
+
+  for (int i = 0; i != 96; i++) {
+    if (binary1[i] == 1) {
+      break;
+    }
+    mask++;
+  }
+
+  mask -= lenght < 0 ? lenght * -1 : 0;
+  lenght = lenght < 0 ? 0 : lenght;
+
+  int counter = -1;
+  while (!__s21_is_greater_or_equal__(tmp, binary2)) {
+    if (mask == 96) {
+      if (lenght == first_step) {
+        result[index++] = 0;
+      }
+      if (max_iter == max_i) {
+        for (int i = 0; i != 96; i++) {
+          binary1[i] = 0;
+        }
+        break;
+      }
+      for (int i = 0; i != 96; i++) {
+        binary1[i] = binary1[i + 1];
+      }
+      mask--;
+      max_iter = iter ? max_iter : ++max_iter, iter = 1;
+    }
+    counter++;
+    for (int i = 0; i != 95; i++) {
+      tmp[i] = tmp[i + 1];
+    }
+    tmp[95] = binary1[mask++];
+
+    if (counter >= lenght + 1) {
+      result[index++] = 0;
+    }
+  }
+
+  if (max_iter != max_i) {
+
+    for (int i = 0; i != 96; i++) {
+      if (i < mask) {
+        tmp[i] = binary2[i + (96 - mask)];
+      } else {
+        tmp[i] = 0;
+      }
+    }
+
+    __s21_sub__(binary1, tmp, binary1);
+
+    result[index++] = 1;
+
+    lenght = 0;
+    for (; lenght != 96; lenght++) {
+      if (binary1[lenght] == 1) {
+        break;
+      }
+    }
+    lenght = mask - lenght;
+  }
+}
+
+void poly_div(_Bool *binary1, _Bool *binary2, _Bool *result) {
+
+  _Bool zero[96] = {0};
+  if (!__s21_is_equal__(binary2, zero)) {
+    while (!__s21_is_equal__(binary1, zero)) {
+      take_element(binary1, binary2, result);
+    }
+  }
+
+  while (result[95] == 0) {
+    for (int i = 95; i != 0; i--) {
+      result[i] = result[i - 1];
+    }
+    result[0] = 0;
+  }
+}
+
+//////////////////////////////////////////////////////////////////
+
 int __s21_div__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
   while (__s21_is_greater_or_equal__(__binary1__, __binary2__, 1)) {
     __s21_sub__(__binary1__, __binary2__, __binary1__);
