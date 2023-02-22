@@ -11,15 +11,15 @@
 
 int main() {
 
-  s21_decimal p1 = {0, 0, 1234, 0};
-  s21_decimal p2 = {0, 0, 64, 0};
+  s21_decimal p1 = {0, 0, 15, 0};
+  s21_decimal p2 = {0, 0, 4, 0};
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(1, 0, &p1);
+  __turn_info_into_decimal__(0, 0, &p1);
   __turn_info_into_decimal__(0, 0, &p2);
 
-  s21_mul(p1, p2, &result);
+  s21_div(p1, p2, &result);
 
   printf("%d\n", result.bits[0]);
   printf("%d\n", result.bits[1]);
@@ -481,14 +481,15 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
   _Bool __result__[96] = {false};
 
-  __s21_div__(__binary1__, __binary2__, __result__);
-
+  // __s21_div__(__binary1__, __binary2__, __result__);
+  int position = poly_div(__binary1__, __binary2__, __result__, 0);
+  __turn_info_into_decimal__(position, 0, result);
   convert_binary_into_decimal(__result__, result);
 }
 
 //////////////////////////////////////////////////////////////////
 
-void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
+int take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
 
   int max_i = 23;
 
@@ -498,8 +499,8 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
 
   static int lenght = first_step;
   static int max_iter = 0;
-  static int index = 0;
   static int point_pos = 0;
+  static int position_flag = 0;
 
   // should be cleared //
 
@@ -521,13 +522,13 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
   int counter = -1;
   while (!__s21_is_greater_or_equal__(tmp, binary2)) {
     if (mask == 96) {
-      point_pos++;
+      position_flag = 1;
       if (lenght == first_step) {
-        result[0] = 0;
         for (int i = 0; i != 96; i++) {
           result[i] = result[i + 1];
         }
         result[95] = 0;
+        point_pos += position_flag ? 1 : 0;
       }
       if (max_iter == max_i) {
         for (int i = 0; i != 96; i++) {
@@ -548,11 +549,11 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
     tmp[95] = binary1[mask++];
 
     if (counter >= lenght + 1) {
-      result[0] = 0;
       for (int i = 0; i != 96; i++) {
         result[i] = result[i + 1];
       }
       result[95] = 0;
+      point_pos += position_flag ? 1 : 0;
     }
   }
 
@@ -568,11 +569,11 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
 
     __s21_sub__(binary1, tmp, binary1);
 
-    result[0] = 1;
     for (int i = 0; i != 96; i++) {
       result[i] = result[i + 1];
     }
     result[95] = 1;
+    point_pos += position_flag ? 1 : 0;
 
     lenght = 0;
     for (; lenght != 96; lenght++) {
@@ -586,23 +587,62 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
       binary1[i] = 0;
     }
   }
+
+  _Bool zero[96] = {0};
+  if (__s21_is_equal__(binary1, zero) && mask != 96) {
+    for (int i = mask; i != 96; i++) {
+      for (int i = 0; i != 96; i++) {
+        result[i] = result[i + 1];
+      }
+      result[95] = 0;
+    }
+  }
+
+  return point_pos;
 }
 
-void poly_div(_Bool *binary1, _Bool *binary2, _Bool *result) {
+int poly_div(_Bool *binary1, _Bool *binary2, _Bool *result, int mod_flag) {
 
+  int position = 0;
   _Bool zero[96] = {0};
   if (!__s21_is_equal__(binary2, zero)) {
     while (!__s21_is_equal__(binary1, zero)) {
-      // for (int i = 0; i != 53; i++) {
-      take_element(binary1, binary2, result);
+      position = take_element(binary1, binary2, result);
     }
   }
+
+  _Bool tmp_bool[96] = {0};
+  for (int i = 96 - position; i != 96; i++) {
+    tmp_bool[i] = result[i];
+  }
+
+  int point_position = 29;
+  if (mod_flag) {
+    for (int i = 0; i != 96; i++) {
+      result[i] = tmp_bool[i];
+    }
+    point_position = 0;
+  } else {
+    s21_decimal tmp_dec = {0};
+    convert_binary_into_decimal(tmp_bool, &tmp_dec);
+
+    int tmp_partition_dec[30] = {0};
+    __div_decimal_convert__(tmp_dec, tmp_partition_dec);
+
+    for (int i = 0; i != 30; i++) {
+      if (tmp_partition_dec[i] != 0) {
+        break;
+      }
+      point_position--;
+    }
+  }
+  return point_position;
 }
 
 //////////////////////////////////////////////////////////////////
 
 int __s21_div__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
-  while (__s21_is_greater_or_equal__(__binary1__, __binary2__, 1)) {
+  while (__s21_is_greater_or_equal__(__binary1__, __binary2__)) {
     __s21_sub__(__binary1__, __binary2__, __binary1__);
     _Bool __one__[96] = {false};
     __one__[95] = 1;
@@ -621,9 +661,8 @@ int s21_mod(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
   _Bool __result__[96] = {false};
 
-  __s21_div__(__binary1__, __binary2__, __result__);
-
-  convert_binary_into_decimal(__binary1__, result);
+  poly_div(__binary1__, __binary2__, __result__, 1);
+  convert_binary_into_decimal(__result__, result);
 }
 
 int s21_is_greater_or_equal(s21_decimal value_1, s21_decimal value_2) {
@@ -637,20 +676,13 @@ int s21_is_greater_or_equal(s21_decimal value_1, s21_decimal value_2) {
     perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
   }
 
-  return_value =
-      __s21_is_greater_or_equal__(__binary1__, __binary2__, return_value);
-
-  return return_value;
+  return __s21_is_greater_or_equal__(__binary1__, __binary2__);
 }
 
-int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__,
-                                int return_value) {
-
-  if ((return_value =
-           __s21_is_equal__(__binary1__, __binary2__, return_value)) == 0) {
-    int zero_flag = 0;
+int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__) {
+  int return_value = 0;
+  if ((return_value = __s21_is_equal__(__binary1__, __binary2__)) == 0) {
     for (int i = 0; i != 96; i++) {
-
       if (__binary1__[i] != __binary2__[i]) {
         if (__binary1__[i] == 1) {
           return_value = 1;
@@ -667,19 +699,17 @@ int s21_is_equal(s21_decimal value_1, s21_decimal value_2) {
   _Bool __binary1__[96] = {false};
   _Bool __binary2__[96] = {false};
 
-  int return_value = 1;
-
   for (int i = 0; i != 3; i++) {
     perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__);
     perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__);
   }
 
-  return_value = __s21_is_equal__(__binary1__, __binary2__, return_value);
-
-  return return_value;
+  return __s21_is_equal__(__binary1__, __binary2__);
+  ;
 }
 
-int __s21_is_equal__(_Bool *__binary1__, _Bool *__binary2__, int return_value) {
+int __s21_is_equal__(_Bool *__binary1__, _Bool *__binary2__) {
+  int return_value = 1;
   for (int i = 0; i != 96; i++) {
     if (__binary1__[i] != __binary2__[i]) {
       return_value = 0;
