@@ -224,7 +224,7 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   }
 }
 
-// 
+//
 
 void __div_convert_back(int *decimal_int, int *decimal_point,
                         s21_decimal *result, int position_result) {
@@ -243,7 +243,7 @@ void __div_convert_back(int *decimal_int, int *decimal_point,
   convert_binary_into_decimal(__binary_result, result);
 }
 
-// 
+//
 
 void __s21_add__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
   int k, p = 0;
@@ -490,7 +490,7 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
 void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
 
-  int max_i = 27;
+  int max_i = 23;
 
   const int first_step = 111111;
 
@@ -499,6 +499,7 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
   static int lenght = first_step;
   static int max_iter = 0;
   static int index = 0;
+  static int point_pos = 0;
 
   // should be cleared //
 
@@ -520,8 +521,13 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
   int counter = -1;
   while (!__s21_is_greater_or_equal__(tmp, binary2)) {
     if (mask == 96) {
+      point_pos++;
       if (lenght == first_step) {
-        result[index++] = 0;
+        result[0] = 0;
+        for (int i = 0; i != 96; i++) {
+          result[i] = result[i + 1];
+        }
+        result[95] = 0;
       }
       if (max_iter == max_i) {
         for (int i = 0; i != 96; i++) {
@@ -542,7 +548,11 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
     tmp[95] = binary1[mask++];
 
     if (counter >= lenght + 1) {
-      result[index++] = 0;
+      result[0] = 0;
+      for (int i = 0; i != 96; i++) {
+        result[i] = result[i + 1];
+      }
+      result[95] = 0;
     }
   }
 
@@ -558,7 +568,11 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
 
     __s21_sub__(binary1, tmp, binary1);
 
-    result[index++] = 1;
+    result[0] = 1;
+    for (int i = 0; i != 96; i++) {
+      result[i] = result[i + 1];
+    }
+    result[95] = 1;
 
     lenght = 0;
     for (; lenght != 96; lenght++) {
@@ -567,6 +581,10 @@ void take_element(_Bool *binary1, _Bool *binary2, _Bool *result) {
       }
     }
     lenght = mask - lenght;
+  } else {
+    for (int i = 0; i != 96; i++) {
+      binary1[i] = 0;
+    }
   }
 }
 
@@ -575,15 +593,9 @@ void poly_div(_Bool *binary1, _Bool *binary2, _Bool *result) {
   _Bool zero[96] = {0};
   if (!__s21_is_equal__(binary2, zero)) {
     while (!__s21_is_equal__(binary1, zero)) {
+      // for (int i = 0; i != 53; i++) {
       take_element(binary1, binary2, result);
     }
-  }
-
-  while (result[95] == 0) {
-    for (int i = 95; i != 0; i--) {
-      result[i] = result[i - 1];
-    }
-    result[0] = 0;
   }
 }
 
