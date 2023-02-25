@@ -7,24 +7,23 @@
 // == //
 // != //
 
-#include <string.h>
-
 int main() {
 
-  s21_decimal p1 = {0, 0, 15, 0};
-  s21_decimal p2 = {0, 0, 4, 0};
+  s21_decimal p1 = {0, 0, 10000, 0};
+  s21_decimal p2 = {0, 0, 1, 0};
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(0, 0, &p1);
+  __turn_info_into_decimal__(3, 0, &p1);
   __turn_info_into_decimal__(0, 0, &p2);
 
-  s21_div(p1, p2, &result);
+  // s21_add(p1, p2, &result);
+  s21_truncate(p1, &result);
 
-  printf("%d\n", result.bits[0]);
-  printf("%d\n", result.bits[1]);
-  printf("%d\n", result.bits[2]);
-  printf("%d\n", result.bits[3]);
+  printf("%u\n", result.bits[0]);
+  printf("%u\n", result.bits[1]);
+  printf("%u\n", result.bits[2]);
+  printf("%u\n", result.bits[3]);
 
   // int _int[30] = {0};
   // _int[29] = 7;
@@ -251,9 +250,6 @@ void __s21_add__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__) {
     k = __binary1__[i] + __binary2__[i] + p;
     __result__[i] = k % 2;
     p = k / 2;
-  }
-  if (p > 0) {
-    __result__[0] = p;
   }
 }
 
@@ -705,7 +701,6 @@ int s21_is_equal(s21_decimal value_1, s21_decimal value_2) {
   }
 
   return __s21_is_equal__(__binary1__, __binary2__);
-  ;
 }
 
 int __s21_is_equal__(_Bool *__binary1__, _Bool *__binary2__) {
@@ -835,4 +830,48 @@ void __turn_info_into_decimal__(int position, int minus, s21_decimal *dst) {
     decimal += __binary1__[i] * pow(2, 31 - i);
   }
   dst->bits[3] = decimal;
+}
+
+void rounding(s21_decimal value, s21_decimal *result) {
+  int tmp[30] = {0};
+  __div_decimal_convert__(value, tmp);
+  tmp[0] = 0;
+  if (tmp[29] >= 5) {
+    for (int i = 29; i != 0; i--) {
+      tmp[i] = tmp[i - 1];
+    }
+    int one[30] = {0};
+    one[29] = 1;
+    ______div_decimal_add______(tmp, one, tmp);
+  } else {
+    for (int i = 29; i != 0; i--) {
+      tmp[i] = tmp[i - 1];
+    }
+  }
+  _Bool _temp_binary_decimal[96] = {0};
+  __div_perform_back__(tmp, _temp_binary_decimal);
+  convert_binary_into_decimal(_temp_binary_decimal, result);
+}
+
+int s21_floor(s21_decimal value, s21_decimal *result) {
+  s21_truncate(value, result);
+}
+
+int s21_round(s21_decimal value, s21_decimal *result) {
+  s21_decimal_info info_1 = {0};
+  __take_info__(&info_1, value);
+  while (info_1.position > 0) {
+    rounding(value, &value);
+    info_1.position--;
+  }
+
+  for (int i = 0; i != 3; i++) {
+    result -> bits[i] = value.bits[i];
+  }
+  __turn_info_into_decimal__(0, info_1.minus, result);
+}
+
+int s21_truncate(s21_decimal value, s21_decimal *result) {
+  s21_decimal _point_1 = {0};
+  __div_decimal__(value, result, &_point_1, 0);
 }
