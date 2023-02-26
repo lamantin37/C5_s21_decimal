@@ -9,21 +9,30 @@
 
 int main() {
 
-  s21_decimal p1 = {0, 0, 10000, 0};
+  s21_decimal p1 = {0, 0, 1111111, 0};
   s21_decimal p2 = {0, 0, 1, 0};
   s21_decimal result = {0, 0, 0, 0};
 
   // полохо обрабатывает в случаях с нулевой точностью одного из децимал
-  __turn_info_into_decimal__(3, 0, &p1);
+  __turn_info_into_decimal__(0, 1, &p1);
   __turn_info_into_decimal__(0, 0, &p2);
 
   // s21_add(p1, p2, &result);
-  s21_truncate(p1, &result);
+  // s21_truncate(p1, &result);
 
-  printf("%u\n", result.bits[0]);
-  printf("%u\n", result.bits[1]);
-  printf("%u\n", result.bits[2]);
-  printf("%u\n", result.bits[3]);
+  // int d = 0;
+  // s21_from_decimal_to_int(p1, &d);
+  // printf("%d\n", d);
+
+  s21_from_float_to_decimal(-1.1111111, &p1);
+  float b = 0;
+  s21_from_decimal_to_float(p1, &b);
+  printf("%0.15f\n", b);
+
+  // printf("%u\n", result.bits[0]);
+  // printf("%u\n", result.bits[1]);
+  // printf("%u\n", result.bits[2]);
+  // printf("%u\n", result.bits[3]);
 
   // int _int[30] = {0};
   // _int[29] = 7;
@@ -748,25 +757,44 @@ void __take_info__(s21_decimal_info *info, s21_decimal value_1) {
 }
 
 int s21_from_decimal_to_float(s21_decimal src, float *dst) {
-  s21_decimal_info info_1 = {0};
-  __take_info__(&info_1, src);
+  s21_decimal _int = {0}, _point = {0};
+  __div_decimal__(src, &_int, &_point, 0);
 
-  _Bool __binary1__[96] = {false};
-  for (int i = 0; i != 3; i++) {
-    perform_decimal_into_binary(src.bits[i], i + 1, __binary1__);
-  }
+  int _decimal[30] = {0};
+  __div_decimal_convert__(_point, _decimal);
 
-  int cnt = 0;
-  for (int i = 0; i != 96; i++, cnt++) {
-    if (__binary1__[i]) {
+  int mask = 0;
+  for (; mask != 30; mask++) {
+    if (_decimal[mask] != 0) {
       break;
     }
   }
 
-  for (int i = 95 - cnt - info_1.position; i >= info_1.position * -1; i--) {
-    *dst += __binary1__[cnt] * pow(2, i);
-    cnt++;
+  int iter_counter = 0;
+
+  for (int i = mask; i != 30; i++) {
+    *dst += _decimal[i] * pow(10, mask - i - 1);
   }
+
+  for (int i = 0; i != 30; i++) {
+    _decimal[i] = 0;
+  }
+  __div_decimal_convert__(_int, _decimal);
+
+  mask = 0;
+  for (; mask != 30; mask++) {
+    if (_decimal[mask] != 0) {
+      break;
+    }
+  }
+  for (int i = 29; i >= mask; i--) {
+    *dst += _decimal[i] * (long)pow(10, 29 - i);
+  }
+
+  s21_decimal_info info = {0};
+  __take_info__(&info, src);
+
+  *dst = info.minus ? *dst * -1 : *dst;
 }
 
 int s21_from_float_to_decimal(float src, s21_decimal *dst) {
@@ -774,11 +802,10 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   int million = 1000000;
   int shift = 0;
 
-  //
-
   int minus = 0;
 
-  //
+  minus = src < 0 ? 1 : minus;
+  src = src < 0 ? src * -1 : src;
 
   if (src < million * 10) {
     while (src < million) {
@@ -799,17 +826,32 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
     }
     src += (src - (int)src) >= 0.5 ? 1 : 0;
   }
-
   s21_from_int_to_decimal((int)src, dst);
-
   __turn_info_into_decimal__(shift, minus, dst);
 }
 
 int s21_from_int_to_decimal(int src, s21_decimal *dst) {
 
-  // надо добавить минус
-
   dst->bits[2] = src;
+  if (src < 0) {
+    __turn_info_into_decimal__(0, 1, dst);
+  }
+
+  return 0;
+}
+
+int s21_from_decimal_to_int(s21_decimal src, int *dst) {
+  s21_decimal _int = {0};
+  s21_decimal _point = {0};
+  __div_decimal__(src, &_int, &_point, 0);
+
+  if (_int.bits[0] == 0 && _int.bits[1] == 0) {
+    *dst = _int.bits[2];
+  }
+
+  s21_decimal_info info = {0};
+  __take_info__(&info, src);
+  *dst = info.minus ? *dst * -1 : *dst;
 
   return 0;
 }
@@ -866,7 +908,7 @@ int s21_round(s21_decimal value, s21_decimal *result) {
   }
 
   for (int i = 0; i != 3; i++) {
-    result -> bits[i] = value.bits[i];
+    result->bits[i] = value.bits[i];
   }
   __turn_info_into_decimal__(0, info_1.minus, result);
 }
