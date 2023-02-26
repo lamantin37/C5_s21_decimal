@@ -9,7 +9,7 @@
 
 int main() {
 
-  s21_decimal p1 = {0, 0, 1111111, 0};
+  s21_decimal p1 = {0, 0, 1, 0};
   s21_decimal p2 = {0, 0, 1, 0};
   s21_decimal result = {0, 0, 0, 0};
 
@@ -24,10 +24,10 @@ int main() {
   // s21_from_decimal_to_int(p1, &d);
   // printf("%d\n", d);
 
-  s21_from_float_to_decimal(-1.1111111, &p1);
+  s21_from_float_to_decimal(-0.01, &p1);
   float b = 0;
   s21_from_decimal_to_float(p1, &b);
-  printf("%0.15f\n", b);
+  printf("%f\n", b);
 
   // printf("%u\n", result.bits[0]);
   // printf("%u\n", result.bits[1]);
@@ -763,13 +763,10 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
   int _decimal[30] = {0};
   __div_decimal_convert__(_point, _decimal);
 
-  int mask = 0;
-  for (; mask != 30; mask++) {
-    if (_decimal[mask] != 0) {
-      break;
-    }
-  }
+    s21_decimal_info info = {0};
+  __take_info__(&info, src);
 
+  int mask = 30 - info.position;
   int iter_counter = 0;
 
   for (int i = mask; i != 30; i++) {
@@ -790,9 +787,6 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
   for (int i = 29; i >= mask; i--) {
     *dst += _decimal[i] * (long)pow(10, 29 - i);
   }
-
-  s21_decimal_info info = {0};
-  __take_info__(&info, src);
 
   *dst = info.minus ? *dst * -1 : *dst;
 }
