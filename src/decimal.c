@@ -13,10 +13,10 @@ int main() {
   s21_decimal p2 = {0, 0, 22, 0};
 
   __turn_info_into_decimal__(1, 0, &p1);  
-  __turn_info_into_decimal__(1, 0, &p2);  
+  __turn_info_into_decimal__(5, 0, &p2);  
 
   s21_decimal result = {0};
-  s21_div(p1, p2, &result);
+  s21_add(p1, p2, &result);
 
   printf("bits[0] = %d\n", result.bits[0]);
   printf("bits[1] = %d\n", result.bits[1]);
@@ -75,6 +75,9 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   __take_info__(&info_1, value_1);
   s21_decimal_info info_2 = {0};
   __take_info__(&info_2, value_2);
+
+  printf("pos1 = %d\n", info_1.position);
+  printf("pos1 = %d\n", info_2.position);
 
   if (info_1.position == 0 && info_2.position == 0) {
     _Bool __binary1__[96] = {false};
@@ -323,10 +326,6 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       _int_2 = value_2;
     }
 
-    printf("bits[2] = %d\n", _point_1.bits[2]);
-    printf("bits[2] = %d\n", _point_2.bits[2]);
-    printf("is_equal = %d\n", s21_is_equal(_point_1, _point_2));
-    printf("is_greater = %d\n", s21_is_greater(_point_1, _point_2));
     // check if _point_1 required one more 1
     if (s21_is_less(_point_1, _point_2)) {
       int decimal_point[30] = {0};
@@ -807,15 +806,6 @@ int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__) {
 ///////////////////////////////////////////////////////////////
 
 void __take_info__(s21_decimal_info *info, s21_decimal value_1) {
-  // _Bool __binary1__[32] = {false};
-
-  // perform_decimal_into_binary(value_1.bits[3], 1, __binary1__);
-
-  // info->minus = __binary1__[1] ? 1 : 0;
-
-  // for (int i = 0; i != 8; i++) {
-  //   info->position += __binary1__[9 + i] * (7 - i);
-  // }
   // Extract sign bit from bits[3]
   info->minus = (value_1.bits[3] >> 31) & 1;
 
@@ -970,3 +960,41 @@ int s21_truncate(s21_decimal value, s21_decimal *result) {
   s21_decimal _point_1 = {0};
   __div_decimal__(value, result, &_point_1, 0);
 }
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+
+void multiply_by_power_of_10(s21_decimal *num, int power) {
+  while (power) {
+    num->bits[2] = (num->bits[2] << 3) + (num->bits[2] << 1);
+    power--;
+
+    int number = num->bits[2];
+    int count = 0;
+    while (number != 0) {
+        count++;
+        number >>= 1; // Right shift the number by 1 bit
+    }
+
+    printf("%d\n", count);
+
+  }
+}
+
+void align_s21_decimals(s21_decimal *a, s21_decimal *b) {
+  int a_scale = (a->bits[3] >> 16) & 0xFF;
+  int b_scale = (b->bits[3] >> 16) & 0xFF;
+  if (a_scale > b_scale) {
+    int diff_scale = a_scale - b_scale;
+    multiply_by_power_of_10(b, diff_scale);
+    b->bits[3] = (b_scale << 16) | (b->bits[3] & 0x80000000);
+  } else if (b_scale > a_scale) {
+    int diff_scale = b_scale - a_scale;
+    multiply_by_power_of_10(a, diff_scale);
+    a->bits[3] = (a_scale << 16) | (a->bits[3] & 0x80000000);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////
