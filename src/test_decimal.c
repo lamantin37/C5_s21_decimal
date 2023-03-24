@@ -1,7 +1,9 @@
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct {
-  int bits[4];
+  unsigned int bits[4];
 } s21_decimal;
 
 void multiply_by_power_of_10(s21_decimal *decimal) {
@@ -10,31 +12,17 @@ void multiply_by_power_of_10(s21_decimal *decimal) {
   for (int i = 2; i != -1; i--) {
     unsigned long long product =
         ((unsigned long long)decimal->bits[i]) * 10 + carry;
-    decimal->bits[i] = (int)(product & 0xFFFFFFFF);
+    decimal->bits[i] = (unsigned int)(product & 0xFFFFFFFF);
     carry = (unsigned int)(product >> 32);
-    carry = ~carry + 1;
+    // carry = ~carry + 1;
   }
   // Handle the highest 32 bits separately to prevent overflow
   unsigned long long product =
       ((unsigned long long)decimal->bits[3] & 0x7FFFFFFF) * 10 + carry;
   decimal->bits[3] =
-      ((decimal->bits[3] & 0x80000000) | (int)(product & 0xFFFFFFFF));
+      ((decimal->bits[3] & 0x80000000) | (unsigned int)(product & 0xFFFFFFFF));
   carry = (unsigned int)(product >> 32);
 }
-
-// void align_s21_decimals(s21_decimal *a, s21_decimal *b) {
-//   int a_scale = (a->bits[3] >> 16) & 0xFF;
-//   int b_scale = (b->bits[3] >> 16) & 0xFF;
-//   if (a_scale > b_scale) {
-//     int diff_scale = a_scale - b_scale;
-//     multiply_by_power_of_10(b, diff_scale);
-//     b->bits[3] = (b_scale << 16) | (b->bits[3] & 0x80000000);
-//   } else if (b_scale > a_scale) {
-//     int diff_scale = b_scale - a_scale;
-//     multiply_by_power_of_10(a, diff_scale);
-//     a->bits[3] = (a_scale << 16) | (a->bits[3] & 0x80000000);
-//   }
-// }
 
 void __turn_info_into_decimal__(int scale, int sign, s21_decimal *dst) {
   // Set unused bits to zero
@@ -45,137 +33,243 @@ void __turn_info_into_decimal__(int scale, int sign, s21_decimal *dst) {
   dst->bits[3] |= (sign << 31) & 0x80000000;
 }
 
-void round_decimal(s21_decimal *decimal) {
-  int scale = (decimal->bits[3] >> 16) & 0xFF; // extract the scale factor
-  int sign = decimal->bits[3] >> 31;           // extract the sign bit
-  int round_bit =
-      decimal->bits[2] & (1 << 31); // extract the round bit (the most
-                                    // significant bit of the middle 32 bits)
+unsigned long long add_unsigned(unsigned int x, unsigned int y) {
+  unsigned int carry, sum;
+  unsigned long long result;
+  carry = 0;
+  result = 0;
+  for (int i = 0; i < 32; i++) {
+    sum = (x >> i) & 1U;
+    sum += (y >> i) & 1U;
+    sum += carry;
+    carry = sum >> 1;
+    result |= (unsigned long long)(sum & 1U) << i;
+  }
+  result |= (unsigned long long)carry << 32;
+  return result;
+}
 
-  if (scale == 0) {
-    // if the scale factor is 0, the decimal is an integer and rounding is
-    // unnecessary
-    return;
+void longIntoInts(unsigned long long result, unsigned int *a,
+                  unsigned int *overflow) {
+  // Take last 32 bits of number
+  *a = (unsigned int)result;
+  // Take first 32 bits of number
+  *overflow = (unsigned int)(result >> 32);
+}
+
+int normalize_decimal(s21_decimal *a, s21_decimal *b) {
+
+  int result_scale = 0;
+  int a_scale = (a->bits[3] >> 16) & 0xFF;
+  int b_scale = (b->bits[3] >> 16) & 0xFF;
+  int scale_diff = a_scale - b_scale;
+  scale_diff = scale_diff < 0 ? scale_diff * -1 : scale_diff;
+  while (scale_diff) {
+    multiply_by_power_of_10(a_scale < b_scale ? a : b);
+    scale_diff--;
   }
 
-  // determine the value to add to the decimal to round it
-  int round_value = 0;
-  if (round_bit != 0) {
-    // if the round bit is set, the decimal needs to be rounded up
-    round_value = 1;
-  }
-  // add the round value to the least significant 32 bits of the decimal
-  decimal->bits[0] += round_value;
+  return a_scale > b_scale ? a_scale : b_scale;
+}
 
-  // check for carry to middle 32 bits
-  if (decimal->bits[0] < round_value) {
-    decimal->bits[1]++;
-    // check for carry to high 32 bits
-    if (decimal->bits[1] == 0) {
-      decimal->bits[2]++;
+int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+  for (int i = 0; i != 4; i++) {
+    result->bits[i] = 0;
+  }
+
+  int scale = normalize_decimal(&value_1, &value_2);
+
+  unsigned int carry = 0;
+  for (int i = 2; i != -1; i--) {
+    unsigned long long num = add_unsigned(value_1.bits[i], value_2.bits[i]);
+    unsigned int result_value = 0;
+    result->bits[i] += carry;
+    longIntoInts(num, &result_value, &carry);
+    result->bits[i] += result_value;
+  }
+
+  result->bits[3] |= (scale << 16) & 0x00FF0000;
+}
+
+void s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+  for (int i = 0; i != 4; i++) {
+    result->bits[i] = 0;
+  }
+
+  int scale = normalize_decimal(&value_1, &value_2);
+
+  unsigned int borrow = 0;
+  for (int i = 2; i >= 0; i--) {
+    unsigned int ai = value_1.bits[i];
+    unsigned int bi = value_2.bits[i];
+    result->bits[i] = ai - bi - borrow;
+    borrow = (ai < bi + borrow);
+  }
+}
+
+int bitLength(unsigned int num) {
+
+  if (num == 0) {
+    return 0;
+  }
+
+  int count = 0;
+  unsigned int mask =
+      1U << ((sizeof(unsigned int) * 8) -
+             1); // create a mask with only the left-most bit set
+
+  while ((num & mask) == 0) {
+    count++;
+    num <<= 1;
+  }
+  return count;
+}
+
+void long_multiply(unsigned int a, unsigned int b, unsigned long long *result) {
+  unsigned long long a_tmp = a;
+  unsigned long long b_tmp = b;
+  for (int i = 0; i < 32; i++) {
+    if ((a_tmp >> i) & 1) {
+      *result += b_tmp << i;
+    }
+  }
+}
+
+int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+  for (int i = 0; i != 4; i++) {
+    result->bits[i] = 0;
+  }
+
+  unsigned int carry = 0;
+  unsigned int overflow = 0;
+  for (int i = 2; i >= 0; i--) {
+    result->bits[i] += overflow;
+    overflow = 0;
+    for (int j = 2; j >= 0; j--) {
+      unsigned long long borrow = 0;
+      long_multiply(value_1.bits[i], value_2.bits[j], &borrow);
+      unsigned int a = 0;
+      longIntoInts(borrow, &a, &carry);
+      overflow += carry;
+      result->bits[i] += a;
     }
   }
 
-  // clear the scale factor and sign bit
-  decimal->bits[3] &= 0x00FFFFFF;
+  int a_scale = (value_1.bits[3] >> 16) & 0xFF;
+  int b_scale = (value_2.bits[3] >> 16) & 0xFF;
+  __turn_info_into_decimal__(a_scale + b_scale, 0, result);
+}
 
-  // update the scale factor if necessary
-  if (round_value != 0) {
-    // if rounding occurred, the scale factor needs to be incremented
-    scale++;
+#define PRECISION 96 // define precision
+
+int long_divide_take_quotient(unsigned long long *dividend, unsigned long long divisor,
+                unsigned long long *quotient) {
+
+  *quotient = 0;
+  if (divisor == 0) {
+    return 0;
   }
-  decimal->bits[3] |= scale << 16;
 
-  // restore the sign bit
-  decimal->bits[3] |= sign << 31;
-}
-
-// s21_decimal add(s21_decimal a, s21_decimal b) {
-//   s21_decimal result;
-//   int carry = 0;
-
-//   // Iterate over each 32-bit word in the Decimal value
-//   for (int i = 2; i > -1; i--) {
-//     // Add the corresponding words from a and b, along with any carry from the
-//     // previous word
-//     long long sum = (long long)a.bits[i] + (long long)b.bits[i] + carry;
-
-//     // Extract the lower 32 bits of the sum and store it in the result
-//     result.bits[i] = (int)sum;
-
-//     // Calculate the carry for the next word
-//     carry = (int)(sum >> 32);
-//   }
-
-//   // Check for overflow
-//   if ((a.bits[3] ^ b.bits[3]) & (result.bits[3] ^ a.bits[3])) {
-//     // Overflow occurred, so set the result to the maximum value of a Decimal
-//     result.bits[0] = result.bits[1] = result.bits[2] = 0xffffffff;
-//     result.bits[3] = 0x7f000000;
-//   } else {
-//     // No overflow, so adjust the scale of the result to match a and b
-//     result.bits[3] = a.bits[3];
-//   }
-
-//   return result;
-// }
-
-#include <stdio.h>
-
-
-long long add(unsigned long long a, long long b) {
-    long long carry;
-    while (b != 0) {
-        carry = a & b;
-        a = a ^ b;
-        b = carry << 1;
+  int iter = 31 - bitLength(*dividend);
+  unsigned long long carry = 1;
+  for (int i = iter; i >= 0; i--) {
+    if ((*dividend >> i) >= divisor) {
+      *quotient |= carry << i;
+      *dividend -= (divisor << i);
     }
-    return a;
+  }
 }
 
-void longlong_to_ints(unsigned long long num, unsigned int *int1, unsigned int *int2) {
-    *int1 = (unsigned int)(num >> 32);  // extract upper 32 bits
-    *int2 = (unsigned int)(num & 0xffffffff);  // extract lower 32 bits
+int long_divide_take_remainder(unsigned long long *dividend, unsigned long long divisor,
+                unsigned long long *remainder) {
+
+  *remainder = 0;
+  if (divisor == 0) {
+    return 0;
+  }
+
+  unsigned long long carry = 1;
+  if (*dividend != 0) {
+    int flag = 0;
+    for (int i = 0; i != PRECISION; i++) {
+      *dividend <<= 1;
+      if (*dividend >= divisor) {
+        *remainder |= carry << i;
+        *dividend -= (divisor);
+        flag = 1;
+      }
+    }
+  }
+}
+
+void s21_div(s21_decimal a, s21_decimal b, s21_decimal *result) {
+
+  //
+
+  unsigned long long dividend = 0;
+  int iter = 0;
+  for (; iter != 3; iter++) {
+    if (bitLength(a.bits[iter] != 0)) {
+      break;
+    }
+  }
+  if (iter == 0) {
+    dividend = a.bits[0];
+    dividend <<= 32;
+    dividend += a.bits[1];
+  } else {
+    dividend = a.bits[1];
+    dividend <<= 32;
+    dividend += a.bits[2];
+  }
+
+  //
+
+  unsigned long long divisor = 0;
+  iter = 0;
+  for (; iter != 3; iter++) {
+    if (bitLength(b.bits[iter] != 0)) {
+      break;
+    }
+  }
+  if (iter == 0) {
+    divisor = b.bits[0];
+    divisor <<= 32;
+    divisor += b.bits[1];
+  } else {
+    divisor = b.bits[1];
+    divisor <<= 32;
+    divisor += b.bits[2];
+  }
+
+  //
+
+  if (iter == 0) {
+    unsigned long long quotient = 0;
+    long_divide_take_quotient(&dividend, divisor, &quotient);
+  }
+
+  //
+
+  
 }
 
 int main() {
-  unsigned long long int num = 1234567890123456789;
-  unsigned int int1, int2;
-  longlong_to_ints(num, &int1, &int2);
-  printf("%d %d\n", int1, int2);  // prints -516995667 -1594969947
+
+  s21_decimal p1 = {0, 1, 2, 0};
+  s21_decimal p2 = {0, 0, 12467145, 0};
+  s21_decimal result = {0, 0, 0, 0};
+  s21_div(p1, p2, &result);
+
+  printf("\n%u\n", result.bits[0]);
+  printf("%u\n", result.bits[1]);
+  printf("%u\n", result.bits[2]);
+  printf("%u\n", result.bits[3]);
+
   return 0;
 }
 
-
-// int main() {
-
-//   s21_decimal p1 = {0, 1, 2147483647, 0};
-//   s21_decimal p2 = {0, 5, 2147443647, 0};
-
-//   __turn_info_into_decimal__(1, 0, &p1);
-//   __turn_info_into_decimal__(1, 0, &p2);
-
-//   unsigned int a = 4294967295;  // 0xffffffff
-//   unsigned int b = 1;
-//   unsigned int sum;
-//   unsigned int overflow;
-//   add_with_overflow(a, b, &sum, &overflow);
-//   printf("%u + %u = %u\n", a, b, sum);
-//   printf("Overflow: %u\n", overflow);
-
-
-
-
-//   printf("bits[0] = %d\n", p1.bits[0]);
-//   printf("bits[1] = %d\n", p1.bits[1]);
-//   printf("bits[2] = %d\n", p1.bits[2]);
-//   printf("bits[3] = %d\n\n", p1.bits[3]);
-//   printf("bits[0] = %d\n", p2.bits[0]);
-//   printf("bits[1] = %d\n", p2.bits[1]);
-//   printf("bits[2] = %d\n", p2.bits[2]);
-//   printf("bits[3] = %d\n", p2.bits[3]);
-
-//   return 0;
-// }
-
-// 1111111111111111110110001110111110
+// 1010101010101010101010101010101010101010101010101010101010101010
