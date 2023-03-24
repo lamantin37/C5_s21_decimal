@@ -90,7 +90,7 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     if (__s21_add__(__binary1__, __binary2__, __result__)) {
       return 1;
     }
-
+    
     convert_binary_into_decimal(__result__, result);
   } else {
     s21_decimal _int_1 = {0, 0, 0, 0};
