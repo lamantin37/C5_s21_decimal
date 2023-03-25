@@ -1,22 +1,22 @@
 #include "decimal.h"
 
-int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-  _Bool __binary1__[96] = {false};
-  _Bool __binary2__[96] = {false};
+// int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+//   _Bool __binary1__[96] = {false};
+//   _Bool __binary2__[96] = {false};
 
-  for (int i = 0; i != 3; i++) {
-    perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__); //
-    perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__); //
-  }
+//   for (int i = 0; i != 3; i++) {
+//     perform_decimal_into_binary(value_1.bits[i], i + 1, __binary1__); //
+//     perform_decimal_into_binary(value_2.bits[i], i + 1, __binary2__); //
+//   }
 
-  _Bool __result__[96] = {false};
+//   _Bool __result__[96] = {false};
 
-  int position = poly_div(__binary1__, __binary2__, __result__, 0);
-  __turn_info_into_decimal__(position, 0, result); //
-  convert_binary_into_decimal(__result__, result); //
+//   int position = poly_div(__binary1__, __binary2__, __result__, 0);
+//   __turn_info_into_decimal__(position, 0, result); //
+//   convert_binary_into_decimal(__result__, result); //
 
-  return 0;
-}
+//   return 0;
+// }
 
 //////////////////////////////////////////////
 

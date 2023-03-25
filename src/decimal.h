@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#define MAXIMUM_UNSIGNED_INT 4294967295
 #define MINIMUM_INT -2147483648
-#define MAXIMUM_INT 2147483647
 
 typedef struct {
   unsigned int bits[4];

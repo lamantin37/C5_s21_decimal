@@ -1,15 +1,14 @@
 #include "decimal.h"
 
-int main() { 
+int main() {
+  s21_decimal p1 = {3, 0, 0, 0x00000000};
+  s21_decimal p2 = {2, 0, 0, 0x00000000};
 
-  s21_decimal p2 = {0, 0, 0xFFFFFFFF, 0x00030000}; // 2.783
-  s21_decimal p1 = {0, 0, 0x00000000, 0x00010000}; // -58.7
-
-  // __turn_info_into_decimal__(1, 0, &p1);  
-  // __turn_info_into_decimal__(0, 0, &p2);  
+  __turn_info_into_decimal__(0, 0, &p1);
+  __turn_info_into_decimal__(0, 0, &p2);
 
   s21_decimal result = {0, 0, 0, 0};
-  s21_sub(p1, p2, &result);
+  s21_div(p1, p2, &result);  // 2 2 0 0
 
   printf("bits[0] = %u\n", result.bits[0]);
   printf("bits[1] = %u\n", result.bits[1]);
@@ -65,7 +64,7 @@ unsigned long long add_unsigned(unsigned int x, unsigned int y) {
 }
 
 void longIntoInts(unsigned long long result, unsigned int *a,
-                  unsigned int *overflow) { //
+                  unsigned int *overflow) {  //
   // Take last 32 bits of number
   *a = (unsigned int)result;
   // Take first 32 bits of number
@@ -73,7 +72,6 @@ void longIntoInts(unsigned long long result, unsigned int *a,
 }
 
 int normalize_decimal(s21_decimal *a, s21_decimal *b) {
-
   int result_scale = 0;
   int a_scale = (a->bits[3] >> 16) & 0xFF;
   int b_scale = (b->bits[3] >> 16) & 0xFF;
@@ -88,53 +86,63 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
 }
 
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
   }
 
   int scale = normalize_decimal(&value_1, &value_2);
+  result->bits[3] |= (scale << 16) & 0x00FF0000;
 
   unsigned int carry = 0;
-  for (int i = 2; i >= 0; i--) {
+  unsigned int carry_case = 0;
+  for (int i = 0; i != 3; i++) {
     unsigned long long num = add_unsigned(value_1.bits[i], value_2.bits[i]);
     unsigned int result_value = 0;
+
+    unsigned long long tmp = (unsigned long long)value_1.bits[i] +
+                             (unsigned long long)value_2.bits[i] +
+                             (unsigned long long)carry;
+    carry_case = (tmp > MAXIMUM_UNSIGNED_INT) && (carry & 1) ? 1 : 0;
+
     result->bits[i] += carry;
     longIntoInts(num, &result_value, &carry);
+    carry += carry_case;
     result->bits[i] += result_value;
   }
 
   if (carry != 0) {
-    result->bits[0] = 0;
-    result->bits[1] = 0;
-    result->bits[2] = 0;
-    result->bits[3] = 0;
-
+    for (int i = 0; i != 4; i++) {
+      result->bits[i] = 0;
+    }
     return 1;
   }
-
-  result->bits[3] |= (scale << 16) & 0x00FF0000;
 
   return 0;
 }
 
 int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-
+  // Initialize the result to zero
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
   }
 
   int scale = normalize_decimal(&value_1, &value_2);
+  result->bits[3] |= (scale << 16) & 0x00FF0000;
 
+  // Subtract the integer parts
   unsigned int borrow = 0;
-  for (int i = 2; i >= 0; i--) {
-    unsigned int ai = value_1.bits[i];
-    unsigned int bi = value_2.bits[i];
-    result->bits[i] = ai - bi - borrow;
-    borrow = (ai < bi + borrow);
+  for (int i = 0; i != 3; i++) {
+    unsigned int diff = value_1.bits[i] - value_2.bits[i] - borrow;
+    if (value_1.bits[i] < value_2.bits[i] ||
+        (value_1.bits[i] == value_2.bits[i] && borrow != 0)) {
+      borrow = 1;
+    } else {
+      borrow = 0;
+    }
+    result->bits[i] = diff;
   }
 
-  result->bits[3] |= (scale << 16) & 0x00FF0000;
+  return 0;  // success
 }
 
 int bitLength(unsigned long long num) {
@@ -143,49 +151,107 @@ int bitLength(unsigned long long num) {
   }
   int count = 0;
   while (num != 0) {
-    if (num & 1) { // check if the least significant bit is 1
+    if (num & 1) {  // check if the least significant bit is 1
       break;
     }
     count++;
-    num >>= 1; // right shift by 1 bit to remove the least significant bit
+    num >>= 1;  // right shift by 1 bit to remove the least significant bit
   }
   return count;
 }
 
-void long_multiply(unsigned int a, unsigned int b, unsigned long long *result) {
-  unsigned long long a_tmp = a;
-  unsigned long long b_tmp = b;
-  for (int i = 0; i < 32; i++) {
-    if ((a_tmp >> i) & 1) {
-      *result += b_tmp << i;
-    }
-  }
-}
+///////////////////////////////////////////////////////////////
 
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+  // Calculate the sign of the result
+  unsigned int sign = (value_1.bits[3] ^ value_2.bits[3]) & 0x80000000;
+  result->bits[3] = sign;
 
-  for (int i = 0; i != 4; i++) {
-    result->bits[i] = 0;
+  // Calculate the exponent of the result
+  unsigned int exponent = (value_1.bits[3] & 0x7F0000) >> 16;
+  exponent += (value_2.bits[3] & 0x7F0000) >> 16;
+  exponent -= 0x3F800000;
+  result->bits[3] |= exponent << 16;
+
+  // Multiply the mantissas
+  unsigned long long int product_low = (unsigned long long int)value_1.bits[0] *
+                                       (unsigned long long int)value_2.bits[0];
+  unsigned long long int product_mid =
+      (unsigned long long int)value_1.bits[0] *
+          (unsigned long long int)value_2.bits[1] +
+      (unsigned long long int)value_1.bits[1] *
+          (unsigned long long int)value_2.bits[0];
+  unsigned long long int product_high =
+      (unsigned long long int)value_1.bits[1] *
+      (unsigned long long int)value_2.bits[1];
+
+  // Add the carry from the low part to the middle part
+  product_mid += (product_low >> 32);
+
+  // Add the carry from the middle part to the high part
+  product_high += (product_mid >> 32);
+
+  // Store the result in the output parameter
+  result->bits[0] = (unsigned int)product_low;
+  result->bits[1] = (unsigned int)(product_mid & 0xFFFFFFFF);
+  result->bits[2] = (unsigned int)(product_high & 0xFFFFFFFF);
+
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////
+
+int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+  // Check for division by zero
+  if (value_2.bits[0] == 0 && value_2.bits[1] == 0 && value_2.bits[2] == 0 &&
+      value_2.bits[3] == 0) {
+    return 1;
   }
 
-  unsigned int carry = 0;
-  unsigned int overflow = 0;
+  // Determine the sign of the result
+  unsigned int sign = (value_1.bits[3] ^ value_2.bits[3]) & 0x80000000;
+
+  if (value_1.bits[0] == MAXIMUM_UNSIGNED_INT &&
+      value_1.bits[1] == MAXIMUM_UNSIGNED_INT &&
+      value_1.bits[2] == MAXIMUM_UNSIGNED_INT &&
+      value_2.bits[0] == MAXIMUM_UNSIGNED_INT &&
+      value_2.bits[1] == MAXIMUM_UNSIGNED_INT &&
+      value_2.bits[2] == MAXIMUM_UNSIGNED_INT) {
+    result->bits[0] = 1;
+    result->bits[1] = 0;
+    result->bits[2] = 0;
+    result->bits[3] = (28 << 16) | sign;
+    return 0;
+  }
+
+  // Compute the absolute value of the result
+  unsigned int remainder = 0;
   for (int i = 2; i >= 0; i--) {
-    result->bits[i] += overflow;
-    overflow = 0;
-    for (int j = 2; j >= 0; j--) {
-      unsigned long long borrow = 0;
-      long_multiply(value_1.bits[i], value_2.bits[j], &borrow);
-      unsigned int a = 0;
-      longIntoInts(borrow, &a, &carry);
-      overflow += carry;
-      result->bits[i] += a;
+    unsigned long long int dividend =
+        ((unsigned long long int)remainder << 32) | value_1.bits[i];
+    unsigned int quotient = 0;
+    if (value_2.bits[i] == 0) {
+      // Handle division by zero bit in the divisor
+      int shift = 0;
+      while (value_2.bits[i + shift] == 0 && i + shift > 0) {
+        shift--;
+      }
+      if (i + shift == 0 && value_2.bits[i + shift] == 0) {
+        // Divisor is zero
+        return 1;
+      }
+      quotient =
+          (unsigned int)(dividend / (value_2.bits[i + shift] >> (-shift * 32)));
+      remainder =
+          (unsigned int)(dividend % (value_2.bits[i + shift] >> (-shift * 32)));
+    } else {
+      quotient = (unsigned int)(dividend / value_2.bits[i]);
+      remainder = (unsigned int)(dividend % value_2.bits[i]);
     }
+    result->bits[i] = quotient;
   }
 
-  int a_scale = (value_1.bits[3] >> 16) & 0xFF;
-  int b_scale = (value_2.bits[3] >> 16) & 0xFF;
-  __turn_info_into_decimal__(a_scale + b_scale, 0, result);
+  return 0;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -214,7 +280,7 @@ int s21_is_equal(s21_decimal a, s21_decimal b) {
     }
   }
 
-  return 1; // The two values are equal
+  return 1;  // The two values are equal
 }
 
 int s21_is_greater(s21_decimal a, s21_decimal b) {
@@ -262,5 +328,10 @@ int s21_is_not_equal(s21_decimal a, s21_decimal b) {
 
 ///////////////////////////////////////////////////////////////
 
-// 10000000000000000000000000000000
-// 110101
+// 1000000000000000000000000000000001
+// 100000000000000000000000000000010
+
+// 18446744065119617000
+// 11111111111111111111111111111101 11111111111111111111111111101000
+// 11111111111111111111111111101000
+// 11111111111111111111111111111101
