@@ -6,7 +6,7 @@ typedef struct {
   unsigned int bits[4];
 } s21_decimal;
 
-void multiply_by_power_of_10(s21_decimal *decimal) {
+void multiply_by_power_of_10(s21_decimal *decimal) { //
   // Multiply the decimal by 10
   unsigned int carry = 0;
   for (int i = 2; i != -1; i--) {
@@ -24,7 +24,7 @@ void multiply_by_power_of_10(s21_decimal *decimal) {
   carry = (unsigned int)(product >> 32);
 }
 
-void __turn_info_into_decimal__(int scale, int sign, s21_decimal *dst) {
+void __turn_info_into_decimal__(int scale, int sign, s21_decimal *dst) { //
   // Set unused bits to zero
   dst->bits[3] &= 0xFF000000;
   // Set exponent bits
@@ -107,22 +107,21 @@ void s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     result->bits[i] = ai - bi - borrow;
     borrow = (ai < bi + borrow);
   }
+
+  result->bits[3] |= (scale << 16) & 0x00FF0000;
 }
 
-int bitLength(unsigned int num) {
-
+int bitLength(unsigned long long num) {
   if (num == 0) {
     return 0;
   }
-
   int count = 0;
-  unsigned int mask =
-      1U << ((sizeof(unsigned int) * 8) -
-             1); // create a mask with only the left-most bit set
-
-  while ((num & mask) == 0) {
+  while (num != 0) {
+    if (num & 1) { // check if the least significant bit is 1
+      break;
+    }
     count++;
-    num <<= 1;
+    num >>= 1; // right shift by 1 bit to remove the least significant bit
   }
   return count;
 }
@@ -163,113 +162,18 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   __turn_info_into_decimal__(a_scale + b_scale, 0, result);
 }
 
-#define PRECISION 96 // define precision
-
-int long_divide_take_quotient(unsigned long long *dividend, unsigned long long divisor,
-                unsigned long long *quotient) {
-
-  *quotient = 0;
-  if (divisor == 0) {
-    return 0;
-  }
-
-  int iter = 31 - bitLength(*dividend);
-  unsigned long long carry = 1;
-  for (int i = iter; i >= 0; i--) {
-    if ((*dividend >> i) >= divisor) {
-      *quotient |= carry << i;
-      *dividend -= (divisor << i);
-    }
-  }
-}
-
-int long_divide_take_remainder(unsigned long long *dividend, unsigned long long divisor,
-                unsigned long long *remainder) {
-
-  *remainder = 0;
-  if (divisor == 0) {
-    return 0;
-  }
-
-  unsigned long long carry = 1;
-  if (*dividend != 0) {
-    int flag = 0;
-    for (int i = 0; i != PRECISION; i++) {
-      *dividend <<= 1;
-      if (*dividend >= divisor) {
-        *remainder |= carry << i;
-        *dividend -= (divisor);
-        flag = 1;
-      }
-    }
-  }
-}
-
-void s21_div(s21_decimal a, s21_decimal b, s21_decimal *result) {
-
-  //
-
-  unsigned long long dividend = 0;
-  int iter = 0;
-  for (; iter != 3; iter++) {
-    if (bitLength(a.bits[iter] != 0)) {
-      break;
-    }
-  }
-  if (iter == 0) {
-    dividend = a.bits[0];
-    dividend <<= 32;
-    dividend += a.bits[1];
-  } else {
-    dividend = a.bits[1];
-    dividend <<= 32;
-    dividend += a.bits[2];
-  }
-
-  //
-
-  unsigned long long divisor = 0;
-  iter = 0;
-  for (; iter != 3; iter++) {
-    if (bitLength(b.bits[iter] != 0)) {
-      break;
-    }
-  }
-  if (iter == 0) {
-    divisor = b.bits[0];
-    divisor <<= 32;
-    divisor += b.bits[1];
-  } else {
-    divisor = b.bits[1];
-    divisor <<= 32;
-    divisor += b.bits[2];
-  }
-
-  //
-
-  if (iter == 0) {
-    unsigned long long quotient = 0;
-    long_divide_take_quotient(&dividend, divisor, &quotient);
-  }
-
-  //
-
-  
-}
-
 int main() {
 
-  s21_decimal p1 = {0, 1, 2, 0};
-  s21_decimal p2 = {0, 0, 12467145, 0};
+  s21_decimal p1 = {0, 4294967295, 4294967295, 0};
+  s21_decimal p2 = {0, 0, 2, 0};
+
   s21_decimal result = {0, 0, 0, 0};
   s21_div(p1, p2, &result);
 
-  printf("\n%u\n", result.bits[0]);
+  printf("%u\n", result.bits[0]);
   printf("%u\n", result.bits[1]);
   printf("%u\n", result.bits[2]);
   printf("%u\n", result.bits[3]);
 
   return 0;
 }
-
-// 1010101010101010101010101010101010101010101010101010101010101010
