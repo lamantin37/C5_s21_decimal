@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #define MAXIMUM_UNSIGNED_INT 4294967295
@@ -40,9 +41,8 @@ int __predict_len__(int number);
 
 int poly_div(_Bool *binary1, _Bool *binary2, _Bool *result, int mod_flag);
 void __div_decimal_convert__(s21_decimal value_1, int *decimal);
-void ____div_decimal_pow____(int *__int1__, int power, int *__result__) ;
-void ______div_decimal_add______(int *__int1__, int *__int2__,
-                                 int *__result__);
+void ____div_decimal_pow____(int *__int1__, int power, int *__result__);
+void ______div_decimal_add______(int *__int1__, int *__int2__, int *__result__);
 int __s21_is_equal__(_Bool *__binary1__, _Bool *__binary2__);
 int take_element(_Bool *binary1, _Bool *binary2, _Bool *result);
 int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__);

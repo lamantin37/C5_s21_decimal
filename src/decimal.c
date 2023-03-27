@@ -8,12 +8,12 @@ int main() {
   __turn_info_into_decimal__(0, 0, &p2);
 
   s21_decimal result = {0, 0, 0, 0};
-  s21_div(p1, p2, &result);  // 2 2 0 0
+  s21_div(p1, p2, &result); // 2 2 0 0
 
   printf("bits[0] = %u\n", result.bits[0]);
   printf("bits[1] = %u\n", result.bits[1]);
   printf("bits[2] = %u\n", result.bits[2]);
-  printf("bits[3] = %u\n", result.bits[3]);
+  printf("bits[3] = %u\n\n", result.bits[3]);
 
   return 0;
 }
@@ -23,7 +23,7 @@ int main() {
 void multiply_by_power_of_10(s21_decimal *decimal) {
   // Multiply the decimal by 10
   unsigned int carry = 0;
-  for (int i = 2; i != -1; i--) {
+  for (int i = 0; i != 3; i++) {
     unsigned long long product =
         ((unsigned long long)decimal->bits[i]) * 10 + carry;
     decimal->bits[i] = (unsigned int)(product & 0xFFFFFFFF);
@@ -64,7 +64,7 @@ unsigned long long add_unsigned(unsigned int x, unsigned int y) {
 }
 
 void longIntoInts(unsigned long long result, unsigned int *a,
-                  unsigned int *overflow) {  //
+                  unsigned int *overflow) { //
   // Take last 32 bits of number
   *a = (unsigned int)result;
   // Take first 32 bits of number
@@ -142,7 +142,7 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     result->bits[i] = diff;
   }
 
-  return 0;  // success
+  return 0; // success
 }
 
 int bitLength(unsigned long long num) {
@@ -151,11 +151,11 @@ int bitLength(unsigned long long num) {
   }
   int count = 0;
   while (num != 0) {
-    if (num & 1) {  // check if the least significant bit is 1
+    if (num & 1) { // check if the least significant bit is 1
       break;
     }
     count++;
-    num >>= 1;  // right shift by 1 bit to remove the least significant bit
+    num >>= 1; // right shift by 1 bit to remove the least significant bit
   }
   return count;
 }
@@ -182,8 +182,8 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       (unsigned long long int)value_1.bits[1] *
           (unsigned long long int)value_2.bits[0];
   unsigned long long int product_high =
-      (unsigned long long int)value_1.bits[1] *
-      (unsigned long long int)value_2.bits[1];
+      (unsigned long long int)value_1.bits[2] *
+      (unsigned long long int)value_2.bits[2];
 
   // Add the carry from the low part to the middle part
   product_mid += (product_low >> 32);
@@ -202,56 +202,33 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 ///////////////////////////////////////////////////////////////
 
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-  // Check for division by zero
-  if (value_2.bits[0] == 0 && value_2.bits[1] == 0 && value_2.bits[2] == 0 &&
-      value_2.bits[3] == 0) {
-    return 1;
-  }
 
-  // Determine the sign of the result
-  unsigned int sign = (value_1.bits[3] ^ value_2.bits[3]) & 0x80000000;
-
-  if (value_1.bits[0] == MAXIMUM_UNSIGNED_INT &&
-      value_1.bits[1] == MAXIMUM_UNSIGNED_INT &&
-      value_1.bits[2] == MAXIMUM_UNSIGNED_INT &&
-      value_2.bits[0] == MAXIMUM_UNSIGNED_INT &&
-      value_2.bits[1] == MAXIMUM_UNSIGNED_INT &&
-      value_2.bits[2] == MAXIMUM_UNSIGNED_INT) {
+  if (value_1.bits[0] == value_2.bits[0] &&
+      value_1.bits[1] == value_2.bits[1] &&
+      value_1.bits[2] == value_2.bits[2]) {
     result->bits[0] = 1;
     result->bits[1] = 0;
     result->bits[2] = 0;
-    result->bits[3] = (28 << 16) | sign;
-    return 0;
   }
 
-  // Compute the absolute value of the result
+  if (value_2.bits[0] == 0 && value_2.bits[1] == 0 && value_2.bits[2] == 0) {
+    return 2;
+  }
+
   unsigned int remainder = 0;
   for (int i = 2; i >= 0; i--) {
-    unsigned long long int dividend =
-        ((unsigned long long int)remainder << 32) | value_1.bits[i];
-    unsigned int quotient = 0;
+    int shift = 0;
     if (value_2.bits[i] == 0) {
-      // Handle division by zero bit in the divisor
-      int shift = 0;
-      while (value_2.bits[i + shift] == 0 && i + shift > 0) {
+      while (value_2.bits[i + shift] == 0) {
         shift--;
       }
-      if (i + shift == 0 && value_2.bits[i + shift] == 0) {
-        // Divisor is zero
-        return 1;
-      }
-      quotient =
-          (unsigned int)(dividend / (value_2.bits[i + shift] >> (-shift * 32)));
-      remainder =
-          (unsigned int)(dividend % (value_2.bits[i + shift] >> (-shift * 32)));
-    } else {
-      quotient = (unsigned int)(dividend / value_2.bits[i]);
-      remainder = (unsigned int)(dividend % value_2.bits[i]);
     }
-    result->bits[i] = quotient;
+    unsigned long long quotient = (unsigned long long) remainder;
+    quotient <<= 32;
+    quotient += value_1.bits[i];
+    result->bits[i] = (unsigned int) (quotient / value_2.bits[i + shift]);
+    remainder = (unsigned int) (quotient - result->bits[i]);
   }
-
-  return 0;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -280,7 +257,7 @@ int s21_is_equal(s21_decimal a, s21_decimal b) {
     }
   }
 
-  return 1;  // The two values are equal
+  return 1; // The two values are equal
 }
 
 int s21_is_greater(s21_decimal a, s21_decimal b) {
@@ -335,3 +312,8 @@ int s21_is_not_equal(s21_decimal a, s21_decimal b) {
 // 11111111111111111111111111111101 11111111111111111111111111101000
 // 11111111111111111111111111101000
 // 11111111111111111111111111111101
+
+// 10000000000000000000000000000001101101011100100001011111001010110000110001111000001111101011100
+// 11
+
+// 1011001011111010110101000111101111001110100001011001010011000111000000000000000000000000000000
