@@ -1,8 +1,8 @@
 #include "decimal.h"
 
 int main() {
-  s21_decimal p1 = {3, 0, 0, 0x00000000};
-  s21_decimal p2 = {2, 0, 0, 0x00000000};
+  s21_decimal p1 = {17, 0, 0, 0x00000000};
+  s21_decimal p2 = {4, 0, 0, 0x00000000};
 
   __turn_info_into_decimal__(0, 0, &p1);
   __turn_info_into_decimal__(0, 0, &p2);
@@ -14,6 +14,9 @@ int main() {
   printf("bits[1] = %u\n", result.bits[1]);
   printf("bits[2] = %u\n", result.bits[2]);
   printf("bits[3] = %u\n\n", result.bits[3]);
+
+  s21_decimal fraction = {0, 0, 0, 0};
+  division_of_the_remainder(result, p1, p2, &fraction);
 
   return 0;
 }
@@ -163,15 +166,37 @@ int bitLength(unsigned long long num) {
 ///////////////////////////////////////////////////////////////
 
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+  // Check for zero or infinity
+  if (((value_1.bits[3] & 0x7FFFFFFF) == 0 && value_1.bits[0] == 0 &&
+       value_1.bits[1] == 0 && value_1.bits[2] == 0) ||
+      ((value_2.bits[3] & 0x7FFFFFFF) == 0 && value_2.bits[0] == 0 &&
+       value_2.bits[1] == 0 && value_2.bits[2] == 0)) {
+    result->bits[0] = 0;
+    result->bits[1] = 0;
+    result->bits[2] = 0;
+    result->bits[3] =
+        (value_1.bits[3] & 0x80000000) ^ (value_2.bits[3] & 0x80000000);
+    return 0;
+  }
+  if (((value_1.bits[3] & 0x7FFFFFFF) == 0x7F800000 && value_1.bits[0] == 0 &&
+       value_1.bits[1] == 0 && value_1.bits[2] == 0) ||
+      ((value_2.bits[3] & 0x7FFFFFFF) == 0x7F800000 && value_2.bits[0] == 0 &&
+       value_2.bits[1] == 0 && value_2.bits[2] == 0)) {
+    result->bits[0] = 0;
+    result->bits[1] = 0;
+    result->bits[2] = 0;
+    result->bits[3] =
+        0x7F800000 | ((value_1.bits[3] ^ value_2.bits[3]) & 0x80000000);
+    return 0;
+  }
   // Calculate the sign of the result
-  unsigned int sign = (value_1.bits[3] ^ value_2.bits[3]) & 0x80000000;
-  result->bits[3] = sign;
+  int sign = ((value_1.bits[3] >> 31) & 1) ^ ((value_2.bits[3] >> 31) & 1);
+  result->bits[3] = sign << 31;
 
   // Calculate the exponent of the result
-  unsigned int exponent = (value_1.bits[3] & 0x7F0000) >> 16;
-  exponent += (value_2.bits[3] & 0x7F0000) >> 16;
-  exponent -= 0x3F800000;
-  result->bits[3] |= exponent << 16;
+  int exponent = ((value_1.bits[3] >> 16) & 0xFF) +
+                 ((value_2.bits[3] >> 16) & 0xFF) - 0x3F800000;
+  unsigned int low, mid, high;
 
   // Multiply the mantissas
   unsigned long long int product_low = (unsigned long long int)value_1.bits[0] *
@@ -191,10 +216,20 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   // Add the carry from the middle part to the high part
   product_high += (product_mid >> 32);
 
+  // Check for overflow
+  if (product_high & 0xFFFFFFFF00000000ULL) {
+    exponent++;
+    product_high >>= 32;
+    product_mid >>= 32;
+  }
+
   // Store the result in the output parameter
   result->bits[0] = (unsigned int)product_low;
-  result->bits[1] = (unsigned int)(product_mid & 0xFFFFFFFF);
-  result->bits[2] = (unsigned int)(product_high & 0xFFFFFFFF);
+  result->bits[1] = (unsigned int)product_mid;
+  result->bits[2] = (unsigned int)product_high;
+
+  // Set the exponent and sign in the output parameter
+  result->bits[3] |= ((unsigned int)exponent << 16);
 
   return 0;
 }
@@ -202,20 +237,31 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 ///////////////////////////////////////////////////////////////
 
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-
+  // Check if both values are equal
   if (value_1.bits[0] == value_2.bits[0] &&
       value_1.bits[1] == value_2.bits[1] &&
       value_1.bits[2] == value_2.bits[2]) {
     result->bits[0] = 1;
     result->bits[1] = 0;
     result->bits[2] = 0;
+    result->bits[3] = 0;
+    return 0;
   }
 
+  // Check if divisor is zero
   if (value_2.bits[0] == 0 && value_2.bits[1] == 0 && value_2.bits[2] == 0) {
     return 2;
   }
 
+  // Determine the scale factor and sign of the result
+  int scale_factor = (value_1.bits[3] & 0x00FF0000) >> 16;
+  scale_factor -= (value_2.bits[3] & 0x00FF0000) >> 16;
+  int sign = (value_1.bits[3] ^ value_2.bits[3]) & 0x80000000;
+
+  // Initialize remainder to zero
   unsigned int remainder = 0;
+
+  // Perform the division
   for (int i = 2; i >= 0; i--) {
     int shift = 0;
     if (value_2.bits[i] == 0) {
@@ -223,12 +269,31 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
         shift--;
       }
     }
-    unsigned long long quotient = (unsigned long long) remainder;
+    unsigned long long quotient = (unsigned long long)remainder;
     quotient <<= 32;
     quotient += value_1.bits[i];
-    result->bits[i] = (unsigned int) (quotient / value_2.bits[i + shift]);
-    remainder = (unsigned int) (quotient - result->bits[i]);
+    result->bits[i] = (unsigned int)(quotient / value_2.bits[i + shift]);
+    remainder = (unsigned int)(quotient - (unsigned long long)result->bits[i] *
+                                              value_2.bits[i + shift]);
   }
+
+  // Set the scale factor and sign of the result
+  result->bits[3] = (scale_factor << 16) | sign;
+
+  return 0;
+}
+
+void division_of_the_remainder(s21_decimal integer_part, s21_decimal quotient,
+                               s21_decimal divisor, s21_decimal *result) {
+
+  s21_decimal temp = {0, 0, 0, 0};
+  s21_mul(integer_part, divisor, &integer_part);
+  s21_sub(quotient, integer_part, &temp);
+
+  printf("bits[0] = %u\n", temp.bits[0]);
+  printf("bits[1] = %u\n", temp.bits[1]);
+  printf("bits[2] = %u\n", temp.bits[2]);
+  printf("bits[3] = %u\n\n", temp.bits[3]);
 }
 
 ///////////////////////////////////////////////////////////////

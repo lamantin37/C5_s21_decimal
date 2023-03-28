@@ -32,6 +32,8 @@ int s21_is_not_equal(s21_decimal a, s21_decimal b);
 ////////////////////////////////////////////////////////////////
 
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
+void division_of_the_remainder(s21_decimal value_1, s21_decimal quotient,
+                               s21_decimal value_2, s21_decimal *result);
 void convert_binary_into_decimal(_Bool *value, s21_decimal *result);
 void perform_decimal_into_binary(int number, int bits, _Bool *__binary__);
 void __converter__(int number, _Bool *__binary__);
