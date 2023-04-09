@@ -1,22 +1,19 @@
 #include "decimal.h"
 
 int main() {
-  s21_decimal p1 = {17, 0, 0, 0x00000000};
-  s21_decimal p2 = {4, 0, 0, 0x00000000};
-
-  __turn_info_into_decimal__(0, 0, &p1);
-  __turn_info_into_decimal__(0, 0, &p2);
+  s21_decimal p1 = {17, 1, 0, 0x00000000};
+  __turn_info_into_decimal__(1, 1, &p1);
 
   s21_decimal result = {0, 0, 0, 0};
-  s21_div(p1, p2, &result); // 2 2 0 0
+  s21_from_float_to_decimal(12.732162, &result);
+  printf("%u\n", result.bits[0]);
+  printf("%u\n", result.bits[1]);
+  printf("%u\n", result.bits[2]);
+  printf("%u\n", result.bits[3]);
 
-  printf("bits[0] = %u\n", result.bits[0]);
-  printf("bits[1] = %u\n", result.bits[1]);
-  printf("bits[2] = %u\n", result.bits[2]);
-  printf("bits[3] = %u\n\n", result.bits[3]);
-
-  s21_decimal fraction = {0, 0, 0, 0};
-  division_of_the_remainder(result, p1, p2, &fraction);
+  float f = .0;
+  s21_from_decimal_to_float(result, &f);
+  printf("%f\n", f);
 
   return 0;
 }
@@ -368,17 +365,132 @@ int s21_is_not_equal(s21_decimal a, s21_decimal b) {
   return (!s21_is_equal(a, b));
 }
 
-///////////////////////////////////////////////////////////////
+int s21_negate(s21_decimal value, s21_decimal *result) {
+  result->bits[0] = value.bits[0];
+  result->bits[1] = value.bits[1];
+  result->bits[2] = value.bits[2];
+  result->bits[3] = (value.bits[3] & 0x7F000000) | value.bits[3] ^ 0x80000000;
+  return 0;
+}
 
-// 1000000000000000000000000000000001
-// 100000000000000000000000000000010
+int s21_from_int_to_decimal(int src, s21_decimal *dst) {
+  for (int i = 0; i != 4; i++) {
+    dst->bits[i] = 0;
+  }
+  __turn_info_into_decimal__(0, src < 0 ? 1 : 0, dst);
+  dst->bits[0] = src < 0 ? -src : src;
+  return 0;
+}
 
-// 18446744065119617000
-// 11111111111111111111111111111101 11111111111111111111111111101000
-// 11111111111111111111111111101000
-// 11111111111111111111111111111101
+int s21_from_decimal_to_int(s21_decimal src, int *dst) {
 
-// 10000000000000000000000000000001101101011100100001011111001010110000110001111000001111101011100
-// 11
+  int src_scale = (src.bits[3] >> 16) & 0xFF;
+  int sign_src = (src.bits[3] >> 31) & 1;
+  unsigned int high_bits = src.bits[2];
+  unsigned long long low_middle_bits = 0;
 
-// 1011001011111010110101000111101111001110100001011001010011000111000000000000000000000000000000
+  if (src_scale <= 10) {
+    low_middle_bits = ((unsigned long long)src.bits[1]) << 32 | src.bits[0];
+    for (int i = 0; i != src_scale; i++) {
+      low_middle_bits /= 10;
+    }
+    if (low_middle_bits > MAXIMUM_INT || src.bits[2] != 0) {
+      return 1;
+    }
+    *dst = (unsigned int)low_middle_bits;
+  } else if (src_scale <= 20) {
+    low_middle_bits = ((unsigned long long)src.bits[2]) << 32 | src.bits[1];
+    for (int i = 0; i != src_scale - 10; i++) {
+      low_middle_bits /= 10;
+    }
+    if (low_middle_bits > MAXIMUM_INT) {
+      return 1;
+    }
+    *dst = (unsigned int)low_middle_bits;
+  } else {
+    *dst = src.bits[2];
+    for (int i = 0; i != src_scale - 20; i++) {
+      *dst /= 10;
+    }
+  }
+
+  *dst *= sign_src ? -1 : 1;
+  return 0;
+}
+
+int reverse_number(int num) {
+  int reversed_num = 0;
+  while (num > 0) {
+    reversed_num = reversed_num * 10 + num % 10;
+    num /= 10;
+  }
+  return reversed_num;
+}
+
+int s21_from_float_to_decimal(float src, s21_decimal *dst) {
+  char buf[40] = "\0";
+  sprintf(buf, "%.7g", src);
+
+  int scale = 0;
+  int sign = 0;
+
+  unsigned int decimal = 0;
+  int factor = 0;
+  for (char *p = buf; *p != '\0'; p++) {
+    if (*p != '.' && *p != '-') {
+      decimal += (*p - 48) * pow(10, factor);
+      factor++;
+    } else {
+      if (*p == '.') {
+        scale = factor;
+      } else if (*p == '-') {
+        sign = 1;
+      }
+    }
+  }
+
+  scale = strlen(buf) - 1 - sign - scale;
+  __turn_info_into_decimal__(scale, sign, dst);
+
+  dst->bits[0] = reverse_number(decimal);
+
+  return 0;
+}
+
+int countDigits(int num) {
+  int count = 0;
+
+  if (num < 0) {
+    num = -num;
+  }
+
+  while (num != 0) {
+    count++;
+    num /= 10;
+  }
+
+  return count;
+}
+
+int s21_from_decimal_to_float(s21_decimal src, float *dst) {
+
+  int decimal_float_part = 0;
+  if (s21_from_decimal_to_int(src, &decimal_float_part) == 1) {
+    return 1;
+  }
+  int lenght = countDigits(decimal_float_part);
+
+  int src_scale = (src.bits[3] >> 16) & 0xFF;
+  int new_scale = src_scale - (7 - lenght) > 0 ? src_scale - (7 - lenght) : 0;
+  __turn_info_into_decimal__(new_scale, 0, &src);
+  if (s21_from_decimal_to_int(src, &decimal_float_part) == 1) {
+    return 1;
+  }
+
+  *dst = decimal_float_part;
+  while (countDigits((int) *dst) != lenght) {
+    *dst *= 0.1;
+  }
+
+  return 0;
+}

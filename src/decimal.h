@@ -2,9 +2,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #define MAXIMUM_UNSIGNED_INT 4294967295
 #define MINIMUM_INT -2147483648
+#define MAXIMUM_INT 2147483647
 
 typedef struct {
   unsigned int bits[4];
@@ -50,3 +53,10 @@ int take_element(_Bool *binary1, _Bool *binary2, _Bool *result);
 int __s21_is_greater_or_equal__(_Bool *__binary1__, _Bool *__binary2__);
 void __s21_sub__(_Bool *__binary1__, _Bool *__binary2__, _Bool *__result__);
 int s21_mod(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
+
+/////////////////////////////////////////////////////////////////
+
+int s21_from_int_to_decimal(int src, s21_decimal *dst);
+int s21_from_decimal_to_int(s21_decimal src, int *dst);
+int s21_from_float_to_decimal(float src, s21_decimal *dst);
+int s21_from_decimal_to_float(s21_decimal src, float *dst);
