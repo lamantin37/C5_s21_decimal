@@ -1,19 +1,15 @@
 #include "decimal.h"
 
 int main() {
-  s21_decimal p1 = {17, 1, 0, 0x00000000};
-  __turn_info_into_decimal__(1, 1, &p1);
+  s21_decimal value = {174, 0, 0, 0};
+  __turn_info_into_decimal__(4, 0, &value);
+  s21_decimal result;
 
-  s21_decimal result = {0, 0, 0, 0};
-  s21_from_float_to_decimal(12.732162, &result);
+  s21_truncate(value, &result);
   printf("%u\n", result.bits[0]);
   printf("%u\n", result.bits[1]);
   printf("%u\n", result.bits[2]);
   printf("%u\n", result.bits[3]);
-
-  float f = .0;
-  s21_from_decimal_to_float(result, &f);
-  printf("%f\n", f);
 
   return 0;
 }
@@ -488,9 +484,34 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
   }
 
   *dst = decimal_float_part;
-  while (countDigits((int) *dst) != lenght) {
+  while (countDigits((int)*dst) != lenght) {
     *dst *= 0.1;
   }
+
+  return 0;
+}
+
+/////////////////////////////////////////////////////////////////
+
+int s21_truncate(s21_decimal value, s21_decimal *result) {
+  unsigned int scale = (value.bits[3] >> 16) & 0x000000FF;
+  int sign = value.bits[3] >> 31;
+  if (scale = 0) {
+    *result = value;
+    return 0;
+  }
+  unsigned int power = 1;
+  for (unsigned int i = 0; i < scale; i++) {
+    power *= 10;
+  }
+  s21_decimal integral;
+  for (int i = 2; i >= 0; i--) {
+    unsigned long long temp = ((unsigned long long)value.bits[i]) * power;
+    integral.bits[i] = (unsigned int)(temp >> 32);
+    value.bits[i] = (unsigned int)(temp & 0xFFFFFFFF);
+  }
+  integral.bits[3] = (scale << 16) | sign;
+  *result = integral;
 
   return 0;
 }
