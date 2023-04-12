@@ -1,15 +1,19 @@
 #include "decimal.h"
 
 int main() {
-  s21_decimal value = {174, 0, 0, 0};
-  __turn_info_into_decimal__(4, 0, &value);
+  s21_decimal value = {47, 0, 0, 0};
+  s21_decimal divisor = {10, 0, 0, 0};
+  __turn_info_into_decimal__(1, 1, &value);
+  __turn_info_into_decimal__(0, 1, &divisor);
   s21_decimal result;
 
-  s21_truncate(value, &result);
+  s21_round(value, &result);
   printf("%u\n", result.bits[0]);
   printf("%u\n", result.bits[1]);
   printf("%u\n", result.bits[2]);
   printf("%u\n", result.bits[3]);
+  int a_scale = (result.bits[3] >> 16) & 0xFF;
+  printf("scale: %d\n", a_scale);
 
   return 0;
 }
@@ -247,9 +251,10 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   }
 
   // Determine the scale factor and sign of the result
-  int scale_factor = (value_1.bits[3] & 0x00FF0000) >> 16;
-  scale_factor -= (value_2.bits[3] & 0x00FF0000) >> 16;
+  int scale_factor_a = (value_1.bits[3] >> 16) & 0xFF;
+  int scale_factor_b = (value_2.bits[3] >> 16) & 0xFF;
   int sign = (value_1.bits[3] ^ value_2.bits[3]) & 0x80000000;
+  int scale_factor = scale_factor_a - scale_factor_b;
 
   // Initialize remainder to zero
   unsigned int remainder = 0;
@@ -270,6 +275,12 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
                                               value_2.bits[i + shift]);
   }
 
+  if (scale_factor < 0) {
+    s21_decimal mul = {10, 0, 0, 0};
+    for (; scale_factor != 0; scale_factor++) {
+      s21_mul(*result, mul, result);
+    }
+  }
   // Set the scale factor and sign of the result
   result->bits[3] = (scale_factor << 16) | sign;
 
@@ -494,24 +505,60 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
 /////////////////////////////////////////////////////////////////
 
 int s21_truncate(s21_decimal value, s21_decimal *result) {
-  unsigned int scale = (value.bits[3] >> 16) & 0x000000FF;
-  int sign = value.bits[3] >> 31;
-  if (scale = 0) {
-    *result = value;
-    return 0;
+  int src_scale = (value.bits[3] >> 16) & 0xFF;
+  int sign_src = (value.bits[3] >> 31) & 1;
+  
+  if (src_scale > 0) {
+    s21_decimal divisor = {10, 0, 0, 0};
+    for (; src_scale != 0; src_scale--) {
+      s21_div(value, divisor, &value);
+    }
   }
-  unsigned int power = 1;
-  for (unsigned int i = 0; i < scale; i++) {
-    power *= 10;
-  }
-  s21_decimal integral;
-  for (int i = 2; i >= 0; i--) {
-    unsigned long long temp = ((unsigned long long)value.bits[i]) * power;
-    integral.bits[i] = (unsigned int)(temp >> 32);
-    value.bits[i] = (unsigned int)(temp & 0xFFFFFFFF);
-  }
-  integral.bits[3] = (scale << 16) | sign;
-  *result = integral;
+
+  *result = value;
+  __turn_info_into_decimal__(0, sign_src, result);
 
   return 0;
 }
+
+int s21_floor(s21_decimal value, s21_decimal *result) {
+  int sign_src = (value.bits[3] >> 31) & 1;
+  s21_truncate(value, result);
+
+  if (sign_src == 1) {
+    s21_decimal minus_one = {1, 0, 0, 0};
+    minus_one.bits[3] = minus_one.bits[3] | 0x80000000;
+    s21_add(*result, minus_one, result);
+    __turn_info_into_decimal__(0, 1, result);
+  }
+
+  return 0;
+}
+
+int s21_round(s21_decimal value, s21_decimal *result) {
+  int src_scale = (value.bits[3] >> 16) & 0xFF;  
+  int sign_src = (value.bits[3] >> 31) & 1;
+
+  if (src_scale > 0) {
+    src_scale--;
+    __turn_info_into_decimal__(src_scale, sign_src, &value);
+    s21_truncate(value, &value);
+    int first_num = value.bits[0] % 10;
+    __turn_info_into_decimal__(1, sign_src, &value);
+    s21_truncate(value, &value);
+    if (first_num >= 5) {
+      s21_decimal one = {1, 0, 0, 0};
+      s21_add(value, one, &value);
+    }
+    *result = value;
+    if (sign_src) {
+        __turn_info_into_decimal__(0, 1, result);
+    }
+  }
+
+}
+
+// 73786976294838210000 
+// 3536 0 4 // if point pos = 9
+
+// 772532262 17 0
