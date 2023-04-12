@@ -41,7 +41,6 @@ void convert_binary_into_decimal(_Bool *value, s21_decimal *result);
 void perform_decimal_into_binary(int number, int bits, _Bool *__binary__);
 void __converter__(int number, _Bool *__binary__);
 int __predict_len__(int number);
-
 /////////////////////////////////////////////////////////////////
 
 int poly_div(_Bool *binary1, _Bool *binary2, _Bool *result, int mod_flag);
@@ -66,3 +65,4 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst);
 int s21_truncate(s21_decimal value, s21_decimal *result);
 int s21_floor(s21_decimal value, s21_decimal *result);
 int s21_round(s21_decimal value, s21_decimal *result);
+int s21_negate(s21_decimal value, s21_decimal *result);
