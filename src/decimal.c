@@ -1,22 +1,32 @@
 #include "decimal.h"
 
 int main() {
-  s21_decimal value = {47, 0, 0, 0};
-  s21_decimal divisor = {10, 0, 0, 0};
-  __turn_info_into_decimal__(1, 1, &value);
-  __turn_info_into_decimal__(0, 1, &divisor);
+  s21_decimal value = {1122433753, 0, 0, 0};
+  s21_decimal divisor = {0, 1, 0, 0};
+  __turn_info_into_decimal__(0, 0, &value);
+  __turn_info_into_decimal__(0, 0, &divisor);
   s21_decimal result;
 
-  s21_round(value, &result);
+  s21_mul(value, divisor, &result);
   printf("%u\n", result.bits[0]);
   printf("%u\n", result.bits[1]);
   printf("%u\n", result.bits[2]);
   printf("%u\n", result.bits[3]);
-  int a_scale = (result.bits[3] >> 16) & 0xFF;
-  printf("scale: %d\n", a_scale);
+  // int a_scale = (result.bits[3] >> 16) & 0xFF;
+  // printf("scale: %d\n", a_scale);
 
   return 0;
 }
+
+// 1) умножение s21_mul \ в краевых случаях может быть переполнение буферных переменных (хз как фиксить)
+// 2) нормализация normalize_decimal \ добавить округление в случае если нормализация 
+//                                                                одного из децималов достигла своего максимума
+//                                                                                                        (use s21_floor (?))
+// 3) деление s21_div \ разобраться с дробным делением, добавить адекватную 
+//                                                        (АДЕКВАТНУЮ(!!!!!! а не как обычно)) нормализацию
+//                                                                        сведение целого и дробных децималов через s21_add                        
+// 4) возможно придется поработать с s21_from_decimal_to_float
+// 5) СУПЕР ВАЖНО ПОДМЕНЯТЬ ФУНКЦИИ СЛОЖЕНИЯ И ВЫЧИТАНИЯ В ЗАВИСИМОСТИ ОТ ЗНАКОВ (СДЕЛАЮ ПОТОМ)
 
 //////////////////////////////////////////////////////////
 
@@ -287,17 +297,32 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   return 0;
 }
 
+int check_zero_decimal(s21_decimal value) {
+  return value.bits[0] == 0 && value.bits[1] == 0 && value.bits[2] == 0;
+}
+
 void division_of_the_remainder(s21_decimal integer_part, s21_decimal quotient,
                                s21_decimal divisor, s21_decimal *result) {
 
   s21_decimal temp = {0, 0, 0, 0};
   s21_mul(integer_part, divisor, &integer_part);
   s21_sub(quotient, integer_part, &temp);
+  s21_decimal ten = {10, 0, 0, 0};
 
-  printf("bits[0] = %u\n", temp.bits[0]);
-  printf("bits[1] = %u\n", temp.bits[1]);
-  printf("bits[2] = %u\n", temp.bits[2]);
-  printf("bits[3] = %u\n\n", temp.bits[3]);
+  int number_Digits = 0;
+  int shift = 2;
+  for (; shift >= 0; shift--) {
+    if ((number_Digits = countDigits(temp.bits[shift])) != 0) {
+      break;
+    }
+  }
+
+  for (int i = 29 - (shift * 10 + number_Digits); i > 0; i--) {
+    s21_mul(temp, ten, &temp);
+  }
+
+  s21_div(temp, divisor, result);
+
 }
 
 ///////////////////////////////////////////////////////////////
@@ -464,11 +489,15 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   return 0;
 }
 
-int countDigits(int num) {
+int countDigits(unsigned int num) {
   int count = 0;
 
   if (num < 0) {
     num = -num;
+  }
+
+  if (num == 0) {
+    return 0; 
   }
 
   while (num != 0) {
@@ -562,3 +591,6 @@ int s21_round(s21_decimal value, s21_decimal *result) {
 // 3536 0 4 // if point pos = 9
 
 // 772532262 17 0
+
+// 101011010111100011101011110001011010110001100010000000000000000000
+// 10001000000000000000000000000000 10011111000100101000000100110000

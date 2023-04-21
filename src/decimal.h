@@ -25,6 +25,8 @@ int bitLength(unsigned long long num);
 void long_multiply(unsigned int a, unsigned int b, unsigned long long *result);
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 
+/////////////////////////////////////////////////////////////////
+
 int s21_is_equal(s21_decimal a, s21_decimal b);
 int s21_is_greater(s21_decimal a, s21_decimal b);
 int s21_is_less(s21_decimal a, s21_decimal b);
@@ -37,10 +39,13 @@ int s21_is_not_equal(s21_decimal a, s21_decimal b);
 int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 void division_of_the_remainder(s21_decimal value_1, s21_decimal quotient,
                                s21_decimal value_2, s21_decimal *result);
+int check_zero_decimal(s21_decimal value);
 void convert_binary_into_decimal(_Bool *value, s21_decimal *result);
 void perform_decimal_into_binary(int number, int bits, _Bool *__binary__);
 void __converter__(int number, _Bool *__binary__);
 int __predict_len__(int number);
+int countDigits(unsigned int num);
+
 /////////////////////////////////////////////////////////////////
 
 int poly_div(_Bool *binary1, _Bool *binary2, _Bool *result, int mod_flag);
