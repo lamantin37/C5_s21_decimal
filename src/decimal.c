@@ -1,13 +1,13 @@
 #include "decimal.h"
 
 int main() {
-  s21_decimal value = {1122433753, 0, 0, 0};
-  s21_decimal divisor = {0, 1, 0, 0};
+  s21_decimal value = {2, 0, 0, 0};
+  s21_decimal divisor = {14, 0, 0, 0};
   __turn_info_into_decimal__(0, 0, &value);
-  __turn_info_into_decimal__(0, 0, &divisor);
+  __turn_info_into_decimal__(0, 1, &divisor);
   s21_decimal result;
 
-  s21_mul(value, divisor, &result);
+  s21_sub(value, divisor, &result);
   printf("%u\n", result.bits[0]);
   printf("%u\n", result.bits[1]);
   printf("%u\n", result.bits[2]);
@@ -18,15 +18,28 @@ int main() {
   return 0;
 }
 
-// 1) умножение s21_mul \ в краевых случаях может быть переполнение буферных переменных (хз как фиксить)
-// 2) нормализация normalize_decimal \ добавить округление в случае если нормализация 
-//                                                                одного из децималов достигла своего максимума
+// 1) умножение s21_mul \ в краевых случаях может быть переполнение буферных
+// переменных (хз как фиксить)
+// 2) нормализация normalize_decimal \ добавить округление в случае если
+// нормализация
+//                                                                одного из
+//                                                                децималов
+//                                                                достигла
+//                                                                своего
+//                                                                максимума
 //                                                                                                        (use s21_floor (?))
-// 3) деление s21_div \ разобраться с дробным делением, добавить адекватную 
-//                                                        (АДЕКВАТНУЮ(!!!!!! а не как обычно)) нормализацию
-//                                                                        сведение целого и дробных децималов через s21_add                        
+// 3) деление s21_div \ разобраться с дробным делением, добавить адекватную
+//                                                        (АДЕКВАТНУЮ(!!!!!! а
+//                                                        не как обычно))
+//                                                        нормализацию
+//                                                                        сведение
+//                                                                        целого
+//                                                                        и
+//                                                                        дробных
+//                                                                        децималов
+//                                                                        через
+//                                                                        s21_add
 // 4) возможно придется поработать с s21_from_decimal_to_float
-// 5) СУПЕР ВАЖНО ПОДМЕНЯТЬ ФУНКЦИИ СЛОЖЕНИЯ И ВЫЧИТАНИЯ В ЗАВИСИМОСТИ ОТ ЗНАКОВ (СДЕЛАЮ ПОТОМ)
 
 //////////////////////////////////////////////////////////
 
@@ -96,9 +109,79 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
 }
 
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+  // Initialize the result to zero
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
   }
+
+  int sign_a = (value_1.bits[3] >> 31) & 1;
+  int sign_b = (value_2.bits[3] >> 31) & 1;
+  int result_func = 0;
+
+  if (sign_a > sign_b) {
+    s21_negate(value_1, &value_1);
+    if (s21_is_greater(value_1, value_2)) {
+      result->bits[3] |= (1 << 31);
+      result_func = _s21_sub_(value_1, value_2, result);
+    } else {
+      result_func = _s21_sub_(value_2, value_1, result);
+    }
+  } else if (sign_b > sign_a) {
+    s21_negate(value_2, &value_2);
+    if (s21_is_greater(value_2, value_1)) {
+      result->bits[3] |= (1 << 31);
+      result_func = _s21_sub_(value_2, value_1, result);
+    } else {
+      result_func = _s21_sub_(value_1, value_2, result);
+    }
+  } else if (sign_b == 1 && sign_b == 1) {
+    result->bits[3] |= (1 << 31);
+    result_func = _s21_add_(value_1, value_2, result);
+  } else {
+    result_func = _s21_add_(value_1, value_2, result);
+  }
+
+  return result_func;
+}
+
+int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+
+  // Initialize the result to zero
+  for (int i = 0; i != 4; i++) {
+    result->bits[i] = 0;
+  }
+
+  int sign_a = (value_1.bits[3] >> 31) & 1;
+  int sign_b = (value_2.bits[3] >> 31) & 1;
+  int result_func = 0;
+
+  if (sign_a > sign_b) {
+    result->bits[3] |= (1 << 31);
+    result_func = _s21_add_(value_1, value_2, result);
+  } else if (sign_b > sign_a) {
+    result_func = _s21_add_(value_1, value_2, result);
+  } else if (sign_b == 1 && sign_b == 1) {
+    s21_negate(value_1, &value_1);
+    if (s21_is_greater(value_1, value_2)) {
+      result->bits[3] |= (1 << 31);
+      result_func = _s21_sub_(value_1, value_2, result);
+    } else {
+      result_func = _s21_sub_(value_2, value_1, result);
+    }
+  } else {
+    if (s21_is_greater(value_2, value_1)) {
+      result->bits[3] |= (1 << 31);
+      result_func = _s21_sub_(value_2, value_1, result);
+    } else {
+      result_func = _s21_sub_(value_1, value_2, result);
+    }
+  }
+
+  return result_func;
+}
+
+int _s21_add_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
   int scale = normalize_decimal(&value_1, &value_2);
   result->bits[3] |= (scale << 16) & 0x00FF0000;
@@ -130,11 +213,7 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   return 0;
 }
 
-int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-  // Initialize the result to zero
-  for (int i = 0; i != 4; i++) {
-    result->bits[i] = 0;
-  }
+int _s21_sub_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
   int scale = normalize_decimal(&value_1, &value_2);
   result->bits[3] |= (scale << 16) & 0x00FF0000;
@@ -306,7 +385,7 @@ void division_of_the_remainder(s21_decimal integer_part, s21_decimal quotient,
 
   s21_decimal temp = {0, 0, 0, 0};
   s21_mul(integer_part, divisor, &integer_part);
-  s21_sub(quotient, integer_part, &temp);
+  _s21_sub_(quotient, integer_part, &temp);
   s21_decimal ten = {10, 0, 0, 0};
 
   int number_Digits = 0;
@@ -322,7 +401,6 @@ void division_of_the_remainder(s21_decimal integer_part, s21_decimal quotient,
   }
 
   s21_div(temp, divisor, result);
-
 }
 
 ///////////////////////////////////////////////////////////////
@@ -497,7 +575,7 @@ int countDigits(unsigned int num) {
   }
 
   if (num == 0) {
-    return 0; 
+    return 0;
   }
 
   while (num != 0) {
@@ -536,7 +614,7 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
 int s21_truncate(s21_decimal value, s21_decimal *result) {
   int src_scale = (value.bits[3] >> 16) & 0xFF;
   int sign_src = (value.bits[3] >> 31) & 1;
-  
+
   if (src_scale > 0) {
     s21_decimal divisor = {10, 0, 0, 0};
     for (; src_scale != 0; src_scale--) {
@@ -557,7 +635,7 @@ int s21_floor(s21_decimal value, s21_decimal *result) {
   if (sign_src == 1) {
     s21_decimal minus_one = {1, 0, 0, 0};
     minus_one.bits[3] = minus_one.bits[3] | 0x80000000;
-    s21_add(*result, minus_one, result);
+    _s21_add_(*result, minus_one, result);
     __turn_info_into_decimal__(0, 1, result);
   }
 
@@ -565,7 +643,7 @@ int s21_floor(s21_decimal value, s21_decimal *result) {
 }
 
 int s21_round(s21_decimal value, s21_decimal *result) {
-  int src_scale = (value.bits[3] >> 16) & 0xFF;  
+  int src_scale = (value.bits[3] >> 16) & 0xFF;
   int sign_src = (value.bits[3] >> 31) & 1;
 
   if (src_scale > 0) {
@@ -577,17 +655,16 @@ int s21_round(s21_decimal value, s21_decimal *result) {
     s21_truncate(value, &value);
     if (first_num >= 5) {
       s21_decimal one = {1, 0, 0, 0};
-      s21_add(value, one, &value);
+      _s21_add_(value, one, &value);
     }
     *result = value;
     if (sign_src) {
-        __turn_info_into_decimal__(0, 1, result);
+      __turn_info_into_decimal__(0, 1, result);
     }
   }
-
 }
 
-// 73786976294838210000 
+// 73786976294838210000
 // 3536 0 4 // if point pos = 9
 
 // 772532262 17 0

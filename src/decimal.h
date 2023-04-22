@@ -20,7 +20,9 @@ void longIntoInts(unsigned long long result, unsigned int *a,
                   unsigned int *overflow);
 int normalize_decimal(s21_decimal *a, s21_decimal *b);
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
+int _s21_add_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
+int _s21_sub_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int bitLength(unsigned long long num);
 void long_multiply(unsigned int a, unsigned int b, unsigned long long *result);
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
