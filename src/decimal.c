@@ -3,7 +3,7 @@
 int main() {
   s21_decimal value = {2, 0, 0, 0};
   s21_decimal divisor = {14, 0, 0, 0};
-  __turn_info_into_decimal__(0, 0, &value);
+  __turn_info_into_decimal__(1, 0, &value);
   __turn_info_into_decimal__(0, 1, &divisor);
   s21_decimal result;
 
@@ -19,15 +19,7 @@ int main() {
 }
 
 // 1) умножение s21_mul \ в краевых случаях может быть переполнение буферных
-// переменных (хз как фиксить)
-// 2) нормализация normalize_decimal \ добавить округление в случае если
-// нормализация
-//                                                                одного из
-//                                                                децималов
-//                                                                достигла
-//                                                                своего
-//                                                                максимума
-//                                                                                                        (use s21_floor (?))
+// переменных (хз как фиксить)                                                                                                   (use s21_floor (?))
 // 3) деление s21_div \ разобраться с дробным делением, добавить адекватную
 //                                                        (АДЕКВАТНУЮ(!!!!!! а
 //                                                        не как обычно))
@@ -95,17 +87,28 @@ void longIntoInts(unsigned long long result, unsigned int *a,
 }
 
 int normalize_decimal(s21_decimal *a, s21_decimal *b) {
-  int result_scale = 0;
   int a_scale = (a->bits[3] >> 16) & 0xFF;
   int b_scale = (b->bits[3] >> 16) & 0xFF;
+  int result_scale = a_scale > b_scale ? a_scale : b_scale;
   int scale_diff = a_scale - b_scale;
   scale_diff = scale_diff < 0 ? scale_diff * -1 : scale_diff;
   while (scale_diff) {
-    multiply_by_power_of_10(a_scale < b_scale ? a : b);
+    if (((unsigned long long)(a_scale < b_scale ? a->bits[2] : b->bits[2]) *
+         10) <= MAXIMUM_UNSIGNED_INT) {
+      multiply_by_power_of_10(a_scale < b_scale ? a : b);
+    } else {
+      a_scale > b_scale ? (a->bits[3] |= (1 << 16) & 0x00FF0000)
+                        : (b->bits[3] |= (1 << 16) & 0x00FF0000);
+      s21_round(a_scale > b_scale ? *a : *b, a_scale > b_scale ? a : b);
+      a_scale > b_scale ? (a->bits[3] |= (a_scale << 16) & 0x00FF0000)
+                        : (b->bits[3] |= (b_scale << 16) & 0x00FF0000);
+
+      result_scale--;
+    }
     scale_diff--;
   }
 
-  return a_scale > b_scale ? a_scale : b_scale;
+  return result_scale;
 }
 
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
@@ -335,7 +338,7 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   }
 
   // Check if divisor is zero
-  if (value_2.bits[0] == 0 && value_2.bits[1] == 0 && value_2.bits[2] == 0) {
+  if (check_zero_decimal(value_2)) {
     return 2;
   }
 
