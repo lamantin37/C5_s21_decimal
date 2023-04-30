@@ -1,26 +1,18 @@
 #include "decimal.h"
 
-int main() {
-  s21_decimal value = {2, 0, 0, 0};
-  s21_decimal divisor = {14, 0, 0, 0};
-  __turn_info_into_decimal__(1, 0, &value);
-  __turn_info_into_decimal__(0, 1, &divisor);
-  s21_decimal result;
+// int main() {
+//   s21_decimal a = {0x0000007B, 0x00000000, 0x00000000, 0x00070000};
+//   s21_decimal b = {0x00000000, 0x00000000, 0x00000000, 0x00010000};
+//   printf("%d\n", s21_is_greater(a, b));
+//   return 0;
+// }
 
-  s21_sub(value, divisor, &result);
-  printf("%u\n", result.bits[0]);
-  printf("%u\n", result.bits[1]);
-  printf("%u\n", result.bits[2]);
-  printf("%u\n", result.bits[3]);
-  // int a_scale = (result.bits[3] >> 16) & 0xFF;
-  // printf("scale: %d\n", a_scale);
-
-  return 0;
-}
+// 79228162514264337593543950340
+// 7922816251426433759354395034
 
 // 1) умножение s21_mul \ в краевых случаях может быть переполнение буферных
-// переменных (хз как фиксить)                                                                                                   (use s21_floor (?))
-// 3) деление s21_div \ разобраться с дробным делением, добавить адекватную
+// переменных (хз как фиксить) (use s21_floor (?)) 3) деление s21_div
+// \ разобраться с дробным делением, добавить адекватную
 //                                                        (АДЕКВАТНУЮ(!!!!!! а
 //                                                        не как обычно))
 //                                                        нормализацию
@@ -93,6 +85,8 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
   int scale_diff = a_scale - b_scale;
   scale_diff = scale_diff < 0 ? scale_diff * -1 : scale_diff;
   while (scale_diff) {
+    // multiply_by_power_of_10(a_scale < b_scale ? a : b);
+    // scale_diff--;
     if (((unsigned long long)(a_scale < b_scale ? a->bits[2] : b->bits[2]) *
          10) <= MAXIMUM_UNSIGNED_INT) {
       multiply_by_power_of_10(a_scale < b_scale ? a : b);
@@ -116,6 +110,19 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   // Initialize the result to zero
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
+  }
+
+  if (value_1.bits[0] == 0 && value_1.bits[1] == 0 && value_1.bits[2] == 0 &&
+      value_1.bits[3] >> 31 & 1) {
+    int a_scale = (value_1.bits[3] >> 16) & 0xFF;
+    value_1.bits[3] = 0;
+    __turn_info_into_decimal__(a_scale, 0, &value_1);
+  }
+  if (value_2.bits[0] == 0 && value_2.bits[1] == 0 && value_2.bits[2] == 0 &&
+      value_2.bits[3] >> 31 & 1) {
+    int a_scale = (value_2.bits[3] >> 16) & 0xFF;
+    value_2.bits[3] = 0;
+    __turn_info_into_decimal__(a_scale, 0, &value_2);
   }
 
   int sign_a = (value_1.bits[3] >> 31) & 1;
@@ -166,18 +173,18 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     result_func = _s21_add_(value_1, value_2, result);
   } else if (sign_b == 1 && sign_b == 1) {
     s21_negate(value_1, &value_1);
-    if (s21_is_greater(value_1, value_2)) {
+    if (s21_is_greater_or_equal(value_1, value_2)) {
       result->bits[3] |= (1 << 31);
       result_func = _s21_sub_(value_1, value_2, result);
     } else {
       result_func = _s21_sub_(value_2, value_1, result);
     }
   } else {
-    if (s21_is_greater(value_2, value_1)) {
+    if (s21_is_greater_or_equal(value_1, value_2)) {
+      result_func = _s21_sub_(value_1, value_2, result);
+    } else {
       result->bits[3] |= (1 << 31);
       result_func = _s21_sub_(value_2, value_1, result);
-    } else {
-      result_func = _s21_sub_(value_1, value_2, result);
     }
   }
 
@@ -255,70 +262,56 @@ int bitLength(unsigned long long num) {
 ///////////////////////////////////////////////////////////////
 
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
-  // Check for zero or infinity
-  if (((value_1.bits[3] & 0x7FFFFFFF) == 0 && value_1.bits[0] == 0 &&
-       value_1.bits[1] == 0 && value_1.bits[2] == 0) ||
-      ((value_2.bits[3] & 0x7FFFFFFF) == 0 && value_2.bits[0] == 0 &&
-       value_2.bits[1] == 0 && value_2.bits[2] == 0)) {
-    result->bits[0] = 0;
-    result->bits[1] = 0;
-    result->bits[2] = 0;
-    result->bits[3] =
-        (value_1.bits[3] & 0x80000000) ^ (value_2.bits[3] & 0x80000000);
-    return 0;
-  }
-  if (((value_1.bits[3] & 0x7FFFFFFF) == 0x7F800000 && value_1.bits[0] == 0 &&
-       value_1.bits[1] == 0 && value_1.bits[2] == 0) ||
-      ((value_2.bits[3] & 0x7FFFFFFF) == 0x7F800000 && value_2.bits[0] == 0 &&
-       value_2.bits[1] == 0 && value_2.bits[2] == 0)) {
-    result->bits[0] = 0;
-    result->bits[1] = 0;
-    result->bits[2] = 0;
-    result->bits[3] =
-        0x7F800000 | ((value_1.bits[3] ^ value_2.bits[3]) & 0x80000000);
-    return 0;
-  }
-  // Calculate the sign of the result
-  int sign = ((value_1.bits[3] >> 31) & 1) ^ ((value_2.bits[3] >> 31) & 1);
-  result->bits[3] = sign << 31;
 
-  // Calculate the exponent of the result
-  int exponent = ((value_1.bits[3] >> 16) & 0xFF) +
-                 ((value_2.bits[3] >> 16) & 0xFF) - 0x3F800000;
-  unsigned int low, mid, high;
-
-  // Multiply the mantissas
-  unsigned long long int product_low = (unsigned long long int)value_1.bits[0] *
-                                       (unsigned long long int)value_2.bits[0];
-  unsigned long long int product_mid =
-      (unsigned long long int)value_1.bits[0] *
-          (unsigned long long int)value_2.bits[1] +
-      (unsigned long long int)value_1.bits[1] *
-          (unsigned long long int)value_2.bits[0];
-  unsigned long long int product_high =
-      (unsigned long long int)value_1.bits[2] *
-      (unsigned long long int)value_2.bits[2];
-
-  // Add the carry from the low part to the middle part
-  product_mid += (product_low >> 32);
-
-  // Add the carry from the middle part to the high part
-  product_high += (product_mid >> 32);
-
-  // Check for overflow
-  if (product_high & 0xFFFFFFFF00000000ULL) {
-    exponent++;
-    product_high >>= 32;
-    product_mid >>= 32;
+  // Initialize the result to zero
+  for (int i = 0; i != 4; i++) {
+    result->bits[i] = 0;
   }
 
-  // Store the result in the output parameter
-  result->bits[0] = (unsigned int)product_low;
-  result->bits[1] = (unsigned int)product_mid;
-  result->bits[2] = (unsigned int)product_high;
+  int a_scale = (value_1.bits[3] >> 16) & 0xFF;
+  int b_scale = (value_2.bits[3] >> 16) & 0xFF;
+  int sign_a = (value_1.bits[3] >> 31) & 1;
+  int sign_b = (value_2.bits[3] >> 31) & 1;
 
-  // Set the exponent and sign in the output parameter
-  result->bits[3] |= ((unsigned int)exponent << 16);
+  s21_decimal ten_exp = {10, 0, 0, 0};
+  value_2.bits[3] = 0;
+  while (s21_is_greater(value_2, ten_exp)) {
+    s21_decimal multiplicand = value_1;
+    multiplicand.bits[3] = 0;
+    while (s21_is_greater(value_2, ten_exp)) {
+      multiply_by_power_of_10(&ten_exp);
+      multiply_by_power_of_10(&multiplicand);
+    }
+    s21_decimal tmp = {0, 0, 0, 0};
+    if (_s21_add_(*result, multiplicand, &tmp) == 1) {
+      for (int i = 0; i != 4; i++) {
+        result->bits[i] = 0;
+      }
+      return 1;
+    }
+    *result = tmp;
+    ten_exp.bits[3] |= 1 << 16;
+    s21_truncate(ten_exp, &ten_exp);
+    ten_exp.bits[3] = 0;
+    _s21_sub_(value_2, ten_exp, &value_2);
+    ten_exp.bits[0] = 10;
+    ten_exp.bits[1] = 0;
+    ten_exp.bits[2] = 0;
+    ten_exp.bits[3] = 0;
+  }
+
+  for (int i = value_2.bits[0]; i > 0; i--) {
+    s21_decimal tmp = {0, 0, 0, 0};
+    if (_s21_add_(*result, value_1, &tmp) == 1) {
+      for (int i = 0; i != 4; i++) {
+        result->bits[i] = 0;
+      }
+      return 1;
+    }
+    *result = tmp;
+  }
+
+  __turn_info_into_decimal__(a_scale + b_scale, sign_a ^ sign_b, result);
 
   return 0;
 }
@@ -410,6 +403,12 @@ void division_of_the_remainder(s21_decimal integer_part, s21_decimal quotient,
 
 int s21_is_equal(s21_decimal a, s21_decimal b) {
   // Compare the sign bit first
+
+  if (a.bits[0] == 0 && a.bits[1] == 0 && a.bits[2] == 0 && b.bits[0] == 0 &&
+      b.bits[1] == 0 && b.bits[2] == 0) {
+    return 1;
+  }
+
   int sign_a = (a.bits[3] >> 31) & 1;
   int sign_b = (b.bits[3] >> 31) & 1;
 
@@ -436,26 +435,36 @@ int s21_is_equal(s21_decimal a, s21_decimal b) {
 }
 
 int s21_is_greater(s21_decimal a, s21_decimal b) {
+
+  if (a.bits[0] == 0 && a.bits[1] == 0 && a.bits[2] == 0 && b.bits[0] == 0 &&
+      b.bits[1] == 0 && b.bits[2] == 0) {
+    return 0;
+  }
+
   // Check signs
-  int aIsNegative = (a.bits[3] & 0x80000000) != 0;
-  int bIsNegative = (b.bits[3] & 0x80000000) != 0;
+  int aIsNegative = (a.bits[3] & 0x80000000);
+  int bIsNegative = (b.bits[3] & 0x80000000);
 
   if (aIsNegative != bIsNegative) {
-    return aIsNegative;
+    return !aIsNegative;
   }
 
   // Check scales
   int aScale = (a.bits[3] >> 16) & 0xFF;
   int bScale = (b.bits[3] >> 16) & 0xFF;
   if (aScale != bScale) {
-    return (aIsNegative ? aScale < bScale : aScale > bScale);
+    return (aIsNegative ? aScale > bScale : aScale < bScale);
   }
 
   // Check integer parts
-  for (int i = 2; i >= 0; i--) {
+  for (int i = 0; i <= 2; i++) {
     if (a.bits[i] != b.bits[i]) {
       return (aIsNegative ? a.bits[i] < b.bits[i] : a.bits[i] > b.bits[i]);
     }
+  }
+
+  if (s21_is_equal(a, b)) {
+    return 0;
   }
 
   // Numbers are equal
