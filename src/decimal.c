@@ -1,11 +1,17 @@
 #include "decimal.h"
 
 // int main() {
-//   s21_decimal a = {0x0000007B, 0x00000000, 0x00000000, 0x00070000};
-//   s21_decimal b = {0x00000000, 0x00000000, 0x00000000, 0x00010000};
+//   s21_decimal a = {0x00000085, 0x00000054, 0x00000013, 0x00010000};
+//   s21_decimal b = {0x00003458, 0x00000054, 0x00000013, 0x00030000};
 //   printf("%d\n", s21_is_greater(a, b));
 //   return 0;
 // }
+
+// 00000000000000000000000000000000
+
+// 00000000000000000000000000000000
+// 00000000000000000000000000000000
+// 00000000000000000000000000000000
 
 // 79228162514264337593543950340
 // 7922816251426433759354395034
@@ -85,8 +91,6 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
   int scale_diff = a_scale - b_scale;
   scale_diff = scale_diff < 0 ? scale_diff * -1 : scale_diff;
   while (scale_diff) {
-    // multiply_by_power_of_10(a_scale < b_scale ? a : b);
-    // scale_diff--;
     if (((unsigned long long)(a_scale < b_scale ? a->bits[2] : b->bits[2]) *
          10) <= MAXIMUM_UNSIGNED_INT) {
       multiply_by_power_of_10(a_scale < b_scale ? a : b);
@@ -416,13 +420,7 @@ int s21_is_equal(s21_decimal a, s21_decimal b) {
     return 0;
   }
 
-  // Compare the scale factors
-  int scale_a = (a.bits[3] >> 16) & 0xFF;
-  int scale_b = (b.bits[3] >> 16) & 0xFF;
-
-  if (scale_a != scale_b) {
-    return 0;
-  }
+  normalize_decimal(&a, &b);
 
   // Compare the integer parts
   for (int i = 2; i >= 0; i--) {
@@ -449,22 +447,17 @@ int s21_is_greater(s21_decimal a, s21_decimal b) {
     return !aIsNegative;
   }
 
-  // Check scales
-  int aScale = (a.bits[3] >> 16) & 0xFF;
-  int bScale = (b.bits[3] >> 16) & 0xFF;
-  if (aScale != bScale) {
-    return (aIsNegative ? aScale > bScale : aScale < bScale);
+  if (s21_is_equal(a, b)) {
+    return 0;
   }
 
+  normalize_decimal(&a, &b);
+
   // Check integer parts
-  for (int i = 0; i <= 2; i++) {
+  for (int i = 2; i >= 0; i--) {
     if (a.bits[i] != b.bits[i]) {
       return (aIsNegative ? a.bits[i] < b.bits[i] : a.bits[i] > b.bits[i]);
     }
-  }
-
-  if (s21_is_equal(a, b)) {
-    return 0;
   }
 
   // Numbers are equal
