@@ -28,11 +28,10 @@ static s21_decimal num1[] = {
     {{0x0001869F, 0x00000000, 0x00000000, 0x00050000}},  // 0.99999
     {{0x0098967E, 0x00000000, 0x00000000, 0x80060000}},  // -9.999998
     {{0x000000CF, 0x00000000, 0x00000000, 0x00010000}},  // 20.7
-    // {{0x0707E3C5, 0x002D8D61, 0x00000000, 0x80090000}},  // -12821821.821281221
+    {{0x0707E3C5, 0x002D8D61, 0x00000000, 0x80090000}},  // -12821821.821281221
     {{0x846A4B4C, 0x0000012A, 0x00000000, 0x00080000}},  // 12821.21812812
     {{0x000035A3, 0x00000000, 0x00000000,
       0x00170000}},  // 0.00000000000000000013731
-    // {{0x79353447, 0x00000004, 0x00000000, 0x00010000}},  // 1921339911.1
 };
 
 static s21_decimal num2[] = {
@@ -59,11 +58,9 @@ static s21_decimal num2[] = {
     {{0x00000002, 0x00000000, 0x00000000, 0x80060000}},  //-0.000002
     {{0x00003F86, 0x00000000, 0x00000000,
       0x00160000}},  // 0.0000000000000000016262
-    // {{0x058FEC8A, 0x00000000, 0x00000000, 0x00050000}},  // 933.18282
+    {{0x058FEC8A, 0x00000000, 0x00000000, 0x00050000}},  // 933.18282
     {{0x0081787B, 0x00000000, 0x00000000, 0x80080000}},  //-0.08484987
     {{0x0001F8A8, 0x00000000, 0x00000000, 0x00030000}},  // 129.192
-    // {{0xD927FFFF, 0xE1003B28, 0x00000004,
-    //   0x00140000}},  // 0.89999999999999999999
 };
 
 static s21_decimal result[] = {
@@ -94,12 +91,10 @@ static s21_decimal result[] = {
     {{0x00989680, 0x00000000, 0x00000000, 0x80060000}},  //-10.000000
     {{0x03603F86, 0x7E1382FF, 0x00002BD5,
       0x00160000}},  // 20.7000000000000000016262
-    // {{0xC1001525, 0x002D8C87, 0x00000000, 0x80090000}},  //-12820888.638461221
+    {{0xC1001525, 0x002D8C87, 0x00000000, 0x80090000}},  //-12820888.638461221
     {{0x83E8D2D1, 0x0000012A, 0x00000000, 0x00080000}},  // 12821.13327825
     {{0x828035A3, 0x3C3F28D0, 0x000AAFBF,
       0x00170000}},  // 129.19200000000000000013731
-    // {{0x9F400000, 0x563581D8, 0x3E14F385,
-    //   0x00130000}},  // 1921339912.0000000000000000000
 };
 
 static s21_decimal err_num1[] = {
@@ -153,23 +148,23 @@ START_TEST(test) {
 }
 END_TEST
 
-// START_TEST(error_test) {
-//   for (size_t i = 0; i < sizeof(err_num1) / sizeof(s21_decimal); ++i) {
-//     s21_decimal tmp;
-//     int ret = s21_add(err_num1[i], err_num2[i], &tmp);
-//     if (tmp.bits[0] == 0) {
-//       tmp.bits[0] = 1;
-//     }
-//     ck_assert_int_eq(ret, err_result[i]);
-//   }
-// }
-// END_TEST
+START_TEST(error_test) {
+  for (size_t i = 0; i < sizeof(err_num1) / sizeof(s21_decimal); ++i) {
+    s21_decimal tmp;
+    int ret = s21_add(err_num1[i], err_num2[i], &tmp);
+    if (tmp.bits[0] == 0) {
+      tmp.bits[0] = 1;
+    }
+    ck_assert_int_eq(ret, err_result[i]);
+  }
+}
+END_TEST
 
 Suite *Create_suite() {
   Suite *suite = suite_create("s21_string tests");
   TCase *tcase_core = tcase_create("Core");
   tcase_add_test(tcase_core, test);
-  // tcase_add_test(tcase_core, error_test);
+  tcase_add_test(tcase_core, error_test);
   suite_add_tcase(suite, tcase_core);
   return suite;
 }

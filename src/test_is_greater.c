@@ -151,7 +151,6 @@ START_TEST(test) {
   for (size_t i = 0; i < sizeof(lhs) / sizeof(s21_decimal); ++i) {
     int ret = s21_is_greater(lhs[i], rhs[i]);
     ck_assert_int_eq(ret, result[i]);
-    printf("%ld\n", i);
   }
 }
 END_TEST
