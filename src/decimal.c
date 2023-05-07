@@ -1,42 +1,19 @@
 #include "decimal.h"
 
-// int main() {
-//   s21_decimal a = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x80080000};
-//   s21_decimal b = {0xFF642CF2, 0xFFFFFFFF, 0xFFFFFFFF, 0x80000000};
-//   s21_decimal res;
-//   printf("%d\n", s21_add(a, b, &res));
-//   for (int i = 0; i != 3; i++) {
-//     printf("%u\n", res.bits[i]);
-//   }
-// }
+int main() {
+  s21_decimal a = {0xFFFFFFFD, 0xFFFFFFFF, 0xFFFFFFFF, 0x80000000};
+  s21_decimal b = {0x00000031, 0x00000000, 0x00000000, 0x00020000}; 
+  s21_decimal res = {0, 0, 0, 0};
 
-// 00000000000000000000000000000000
+  s21_sub(a, b, &res);
+  for (int i = 0; i != 4; i++) {
+    printf("%u\n", res.bits[i]);
+  }
 
-// 00000000000000000000000000000000
-// 00000000000000000000000000000000
-// 00000000000000000000000000000000
+}
 
-// 79228163306545962736177114161
-// 79228162514264337593543950335
-// 79228162514264337593543950340
-// 7922816251426433759354395034
-
-// 1) умножение s21_mul \ в краевых случаях может быть переполнение буферных
-// переменных (хз как фиксить) (use s21_floor (?)) 3) деление s21_div
-// \ разобраться с дробным делением, добавить адекватную
-//                                                        (АДЕКВАТНУЮ(!!!!!! а
-//                                                        не как обычно))
-//                                                        нормализацию
-//                                                                        сведение
-//                                                                        целого
-//                                                                        и
-//                                                                        дробных
-//                                                                        децималов
-//                                                                        через
-//                                                                        s21_add
-// 4) возможно придется поработать с s21_from_decimal_to_float
-
-//////////////////////////////////////////////////////////
+// 000110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011010
+// 111111111111111111111111111111111111111111111111111111111111111111111111111100001011110110111111
 
 void multiply_by_power_of_10(s21_decimal *decimal) {
   // Multiply the decimal by 10
@@ -104,10 +81,10 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
     } else {
       a_scale > b_scale ? (a->bits[3] = (1 << 16) & 0x00FF0000)
                         : (b->bits[3] = (1 << 16) & 0x00FF0000);
-      a_scale > b_scale ? a_scale--: b_scale--;
       s21_round(a_scale > b_scale ? *a : *b, a_scale > b_scale ? a : b);
       a_scale > b_scale ? (a->bits[3] = (a_scale << 16) & 0x00FF0000)
                         : (b->bits[3] = (b_scale << 16) & 0x00FF0000);
+      a_scale > b_scale ? a_scale--: b_scale--;
       result_scale--;
       a->bits[3] |= sign_a << 31;
       b->bits[3] |= sign_b << 31;
@@ -183,6 +160,7 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   if (sign_a > sign_b) {
     result->bits[3] |= (1 << 31);
     result_func = _s21_add_(value_1, value_2, result);
+    result_func = result_func == 1 ? 2: 0;
   } else if (sign_b > sign_a) {
     result_func = _s21_add_(value_1, value_2, result);
   } else if (sign_b == 1 && sign_b == 1) {
@@ -388,29 +366,6 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
 
 int check_zero_decimal(s21_decimal value) {
   return value.bits[0] == 0 && value.bits[1] == 0 && value.bits[2] == 0;
-}
-
-void division_of_the_remainder(s21_decimal integer_part, s21_decimal quotient,
-                               s21_decimal divisor, s21_decimal *result) {
-
-  s21_decimal temp = {0, 0, 0, 0};
-  s21_mul(integer_part, divisor, &integer_part);
-  _s21_sub_(quotient, integer_part, &temp);
-  s21_decimal ten = {10, 0, 0, 0};
-
-  int number_Digits = 0;
-  int shift = 2;
-  for (; shift >= 0; shift--) {
-    if ((number_Digits = countDigits(temp.bits[shift])) != 0) {
-      break;
-    }
-  }
-
-  for (int i = 29 - (shift * 10 + number_Digits); i > 0; i--) {
-    s21_mul(temp, ten, &temp);
-  }
-
-  s21_div(temp, divisor, result);
 }
 
 ///////////////////////////////////////////////////////////////
@@ -661,28 +616,26 @@ int s21_round(s21_decimal value, s21_decimal *result) {
   int src_scale = (value.bits[3] >> 16) & 0xFF;
   int sign_src = (value.bits[3] >> 31) & 1;
 
+  s21_decimal res = {0, 0, 0, 0};
   if (src_scale > 0) {
-    src_scale--;
-    __turn_info_into_decimal__(src_scale, sign_src, &value);
+    s21_decimal dst = value;
+    s21_truncate(dst, &dst);
+    __turn_info_into_decimal__(src_scale - 1, 0, &value);
     s21_truncate(value, &value);
-    int first_num = value.bits[0] % 10;
-    __turn_info_into_decimal__(1, sign_src, &value);
-    s21_truncate(value, &value);
-    if (first_num >= 5) {
+    s21_decimal last = {0, 0, 0, 0};
+    _s21_sub_(value, dst, &last);
+    if (last.bits[0] >= 5) {
       s21_decimal one = {1, 0, 0, 0};
-      _s21_add_(value, one, &value);
-    }
-    *result = value;
-    if (sign_src) {
-      __turn_info_into_decimal__(0, 1, result);
+      _s21_add_(dst, one, &res);
     }
   }
+
+  for (int i = 0; i != 4; i++) {
+    result->bits[i] = 0;
+  }
+  *result = res;
+
+  __turn_info_into_decimal__(0, sign_src, result);
+
+  return 0;
 }
-
-// 73786976294838210000
-// 3536 0 4 // if point pos = 9
-
-// 772532262 17 0
-
-// 101011010111100011101011110001011010110001100010000000000000000000
-// 10001000000000000000000000000000 10011111000100101000000100110000

@@ -144,6 +144,7 @@ START_TEST(test) {
     ck_assert_int_eq(tmp.bits[2], result[i].bits[2]);
     ck_assert_int_eq(tmp.bits[3], result[i].bits[3]);
     ck_assert_int_eq(ret, 0);
+    printf("%ld\n", i);
   }
 }
 END_TEST
@@ -156,6 +157,7 @@ START_TEST(error_test) {
       tmp.bits[0] = 1;
     }
     ck_assert_int_eq(ret, err_result[i]);
+    printf("%ld\n", i);
   }
 }
 END_TEST
