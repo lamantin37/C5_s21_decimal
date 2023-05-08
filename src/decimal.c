@@ -1,16 +1,16 @@
 #include "decimal.h"
 
-int main() {
-  s21_decimal a = {0xFFFFFFFD, 0xFFFFFFFF, 0xFFFFFFFF, 0x80000000};
-  s21_decimal b = {0x00000031, 0x00000000, 0x00000000, 0x00020000}; 
-  s21_decimal res = {0, 0, 0, 0};
+// int main() {
+//   s21_decimal a = {0x10C2F579, 0x00000000, 0x00000000, 0x80050000};
+//   s21_decimal b = {0x10C44951, 0x00000000, 0x00000000, 0x80030000};
+//   s21_decimal res = {0, 0, 0, 0};
 
-  s21_sub(a, b, &res);
-  for (int i = 0; i != 4; i++) {
-    printf("%u\n", res.bits[i]);
-  }
+//   s21_sub(a, b, &res);
+//   for (int i = 0; i != 4; i++) {
+//     printf("%u\n", res.bits[i]);
+//   }
 
-}
+// }
 
 // 000110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011010
 // 111111111111111111111111111111111111111111111111111111111111111111111111111100001011110110111111
@@ -79,15 +79,17 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
          10) <= MAXIMUM_UNSIGNED_INT) {
       multiply_by_power_of_10(a_scale < b_scale ? a : b);
     } else {
-      a_scale > b_scale ? (a->bits[3] = (1 << 16) & 0x00FF0000)
-                        : (b->bits[3] = (1 << 16) & 0x00FF0000);
+
+      a_scale > b_scale ? (a->bits[3] = (scale_diff << 16) & 0x00FF0000)
+                        : (b->bits[3] = (scale_diff << 16) & 0x00FF0000);
       s21_round(a_scale > b_scale ? *a : *b, a_scale > b_scale ? a : b);
+      a_scale > b_scale ? (a_scale -= scale_diff) : (b_scale -= scale_diff);
       a_scale > b_scale ? (a->bits[3] = (a_scale << 16) & 0x00FF0000)
                         : (b->bits[3] = (b_scale << 16) & 0x00FF0000);
-      a_scale > b_scale ? a_scale--: b_scale--;
-      result_scale--;
+      result_scale -= scale_diff;
       a->bits[3] |= sign_a << 31;
       b->bits[3] |= sign_b << 31;
+      break;
     }
     scale_diff--;
   }
@@ -138,7 +140,7 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   } else if (sign_b == 1 && sign_b == 1) {
     result->bits[3] |= (1 << 31);
     result_func = _s21_add_(value_1, value_2, result);
-    result_func = result_func == 1 ? 2: 0;
+    result_func = result_func == 1 ? 2 : 0;
   } else {
     result_func = _s21_add_(value_1, value_2, result);
   }
@@ -160,11 +162,12 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   if (sign_a > sign_b) {
     result->bits[3] |= (1 << 31);
     result_func = _s21_add_(value_1, value_2, result);
-    result_func = result_func == 1 ? 2: 0;
+    result_func = result_func == 1 ? 2 : 0;
   } else if (sign_b > sign_a) {
     result_func = _s21_add_(value_1, value_2, result);
   } else if (sign_b == 1 && sign_b == 1) {
     s21_negate(value_1, &value_1);
+    s21_negate(value_2, &value_2);
     if (s21_is_greater_or_equal(value_1, value_2)) {
       result->bits[3] |= (1 << 31);
       result_func = _s21_sub_(value_1, value_2, result);
