@@ -24,22 +24,6 @@ void __turn_info_into_decimal__(int scale, int sign, s21_decimal *dst) {
   dst->bits[3] |= (sign << 31) & 0x80000000;
 }
 
-unsigned long long add_unsigned(unsigned int x, unsigned int y) {
-  unsigned int carry, sum;
-  unsigned long long result;
-  carry = 0;
-  result = 0;
-  for (int i = 0; i < 32; i++) {
-    sum = (x >> i) & 1U;
-    sum += (y >> i) & 1U;
-    sum += carry;
-    carry = sum >> 1;
-    result |= (unsigned long long)(sum & 1U) << i;
-  }
-  result |= (unsigned long long)carry << 32;
-  return result;
-}
-
 void longIntoInts(unsigned long long result, unsigned int *a,
                   unsigned int *overflow) { //
   *a = (unsigned int)result;
@@ -73,7 +57,6 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
     }
     scale_diff--;
   }
-
   return result_scale;
 }
 
@@ -152,7 +135,6 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       result_func = _s21_sub_(value_2, value_1, result);
     }
   }
-
   return result_func;
 }
 
@@ -162,27 +144,27 @@ int _s21_add_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   unsigned int carry = 0;
   unsigned int carry_case = 0;
   for (int i = 0; i != 3; i++) {
-    unsigned long long num = add_unsigned(value_1.bits[i], value_2.bits[i]);
+    unsigned long long num = (unsigned long long)value_1.bits[i] +
+                             (unsigned long long)value_2.bits[i];
     unsigned int result_value = 0;
 
     unsigned long long tmp = (unsigned long long)value_1.bits[i] +
                              (unsigned long long)value_2.bits[i] +
                              (unsigned long long)carry;
     carry_case = (tmp > MAXIMUM_UNSIGNED_INT) && (carry & 1) ? 1 : 0;
-
     result->bits[i] += carry;
     longIntoInts(num, &result_value, &carry);
     carry += carry_case;
     result->bits[i] += result_value;
   }
+  int return_value = 0;
   if (carry != 0) {
     for (int i = 0; i != 4; i++) {
       result->bits[i] = 0;
     }
-    return 1;
+    return_value = 1;
   }
-
-  return 0;
+  return return_value;
 }
 
 int _s21_sub_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
@@ -200,21 +182,6 @@ int _s21_sub_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     result->bits[i] = diff;
   }
   return 0;
-}
-
-int bitLength(unsigned long long num) {
-  if (num == 0) {
-    return 0;
-  }
-  int count = 0;
-  while (num != 0) {
-    if (num & 1) {
-      break;
-    }
-    count++;
-    num >>= 1;
-  }
-  return count;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -320,44 +287,46 @@ int check_zero_decimal(s21_decimal value) {
 ///////////////////////////////////////////////////////////////
 
 int s21_is_equal(s21_decimal a, s21_decimal b) {
+  int return_value = 1;
   if (a.bits[0] == 0 && a.bits[1] == 0 && a.bits[2] == 0 && b.bits[0] == 0 &&
       b.bits[1] == 0 && b.bits[2] == 0) {
-    return 1;
-  }
-  int sign_a = (a.bits[3] >> 31) & 1;
-  int sign_b = (b.bits[3] >> 31) & 1;
-  if (sign_a != sign_b) {
-    return 0;
-  }
-  normalize_decimal(&a, &b);
-  for (int i = 2; i >= 0; i--) {
-    if (a.bits[i] != b.bits[i]) {
-      return 0;
+    return_value = 1;
+  } else {
+    int sign_a = (a.bits[3] >> 31) & 1;
+    int sign_b = (b.bits[3] >> 31) & 1;
+    if (sign_a != sign_b) {
+      return_value = 0;
+    } else {
+      normalize_decimal(&a, &b);
+      for (int i = 2; i >= 0; i--) {
+        if (a.bits[i] != b.bits[i]) {
+          return_value = 0;
+        }
+      }
     }
   }
-  return 1;
+  return return_value;
 }
 
 int s21_is_greater(s21_decimal a, s21_decimal b) {
-  if (a.bits[0] == 0 && a.bits[1] == 0 && a.bits[2] == 0 && b.bits[0] == 0 &&
-      b.bits[1] == 0 && b.bits[2] == 0) {
-    return 0;
-  }
-  int aIsNegative = (a.bits[3] & 0x80000000);
-  int bIsNegative = (b.bits[3] & 0x80000000);
-  if (aIsNegative != bIsNegative) {
-    return !aIsNegative;
-  }
+  int return_value = 1;
   if (s21_is_equal(a, b)) {
-    return 0;
-  }
-  normalize_decimal(&a, &b);
-  for (int i = 2; i >= 0; i--) {
-    if (a.bits[i] != b.bits[i]) {
-      return (aIsNegative ? a.bits[i] < b.bits[i] : a.bits[i] > b.bits[i]);
+    return_value = 0;
+  } else {
+    if ((a.bits[3] & 0x80000000) != (b.bits[3] & 0x80000000)) {
+      return_value = !(a.bits[3] & 0x80000000);
+    } else {
+      normalize_decimal(&a, &b);
+      for (int i = 2; i >= 0; i--) {
+        if (a.bits[i] != b.bits[i]) {
+          return_value = ((a.bits[3] & 0x80000000) ? a.bits[i] < b.bits[i]
+                                                   : a.bits[i] > b.bits[i]);
+          break;
+        }
+      }
     }
   }
-  return 1;
+  return return_value;
 }
 
 int s21_is_less(s21_decimal a, s21_decimal b) {
@@ -396,15 +365,16 @@ int s21_from_int_to_decimal(int src, s21_decimal *dst) {
 int s21_from_decimal_to_int(s21_decimal src, int *dst) {
   int src_scale = (src.bits[3] >> 16) & 0xFF;
   int sign_src = (src.bits[3] >> 31) & 1;
+  int return_value = 0;
   s21_truncate(src, &src);
   *dst = 0;
   if (src.bits[1] != 0 || src.bits[2] != 0) {
-    return 1;
+    return_value = 1;
   } else {
     *dst = src.bits[0];
+    *dst *= sign_src == 1 ? -1 : 1;
   }
-  *dst *= sign_src == 1 ? -1 : 1;
-  return 0;
+  return return_value;
 }
 
 int reverse_number(int num) {
@@ -498,56 +468,62 @@ int s21_from_decimal_to_float(s21_decimal src, float *dst) {
 int s21_truncate(s21_decimal value, s21_decimal *result) {
   int src_scale = (value.bits[3] >> 16) & 0xFF;
   int sign_src = (value.bits[3] >> 31) & 1;
+  int return_value = 0;
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
   }
   if (src_scale > 28) {
-    return 1;
-  }
-  if (src_scale > 0) {
-    s21_decimal divisor = {10, 0, 0, 0};
-    for (; src_scale != 0; src_scale--) {
-      s21_div(value, divisor, &value);
+    return_value = 1;
+  } else {
+    if (src_scale > 0) {
+      s21_decimal divisor = {10, 0, 0, 0};
+      for (; src_scale != 0; src_scale--) {
+        s21_div(value, divisor, &value);
+      }
     }
+    *result = value;
+    __turn_info_into_decimal__(0, sign_src, result);
   }
-  *result = value;
-  __turn_info_into_decimal__(0, sign_src, result);
-  return 0;
+  return return_value;
 }
 
 int s21_floor(s21_decimal value, s21_decimal *result) {
   int sign_src = (value.bits[3] >> 31) & 1;
   int src_scale = (value.bits[3] >> 16) & 0xFF;
+  int return_value = 0;
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
   }
   if (value.bits[0] == 0 && value.bits[1] == 0 && value.bits[2] == 0) {
     __turn_info_into_decimal__(0, sign_src, result);
-    return 0;
-  }
-  if (src_scale == 0) {
-    for (int i = 0; i != 4; i++) {
-      result->bits[i] = value.bits[i];
+  } else {
+    if (src_scale == 0) {
+      for (int i = 0; i != 4; i++) {
+        result->bits[i] = value.bits[i];
+      }
+    } else {
+      if (s21_truncate(value, result) == 1) {
+        return_value = 1;
+      } else {
+        if (sign_src == 1) {
+          s21_decimal minus_one = {1, 0, 0, 0};
+          minus_one.bits[3] |= 0x80000000;
+          s21_decimal tmp = {0, 0, 0, 0};
+          _s21_add_(*result, minus_one, &tmp);
+          *result = tmp;
+          __turn_info_into_decimal__(0, 1, result);
+        }
+      }
     }
-    return 0;
   }
-  if (s21_truncate(value, result) == 1) {
-    return 1;
-  }
-  if (sign_src == 1) {
-    s21_decimal minus_one = {1, 0, 0, 0};
-    minus_one.bits[3] |= 0x80000000;
-    s21_decimal tmp = {0, 0, 0, 0};
-    _s21_add_(*result, minus_one, &tmp);
-    *result = tmp;
-    __turn_info_into_decimal__(0, 1, result);
-  }
-  return 0;
+  return return_value;
 }
 
 int s21_round(s21_decimal value, s21_decimal *result) {
   int src_scale = (value.bits[3] >> 16) & 0xFF;
   int sign_src = (value.bits[3] >> 31) & 1;
+  int return_value_1 = 0;
+  int return_value_2 = 0;
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
   }
@@ -555,12 +531,8 @@ int s21_round(s21_decimal value, s21_decimal *result) {
   if (src_scale > 0) {
     s21_decimal tmp = value;
     __turn_info_into_decimal__(src_scale - 1, sign_src, &tmp);
-    if (s21_truncate(tmp, &tmp) == 1) {
-      return 1;
-    }
-    if (s21_truncate(value, &value) == 1) {
-      return 1;
-    }
+    return_value_1 = s21_truncate(tmp, &tmp);
+    return_value_2 = s21_truncate(value, &value);
     __turn_info_into_decimal__(1, sign_src, &tmp);
     s21_sub(tmp, value, &tmp);
     if (tmp.bits[0] >= 5) {
@@ -574,5 +546,10 @@ int s21_round(s21_decimal value, s21_decimal *result) {
   } else {
     *result = value;
   }
-  return 0;
+  if (return_value_1 || return_value_2) {
+    for (int i = 0; i != 4; i++) {
+      result->bits[i] = 0;
+    }
+  }
+  return return_value_1 || return_value_2;
 }
