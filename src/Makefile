@@ -58,9 +58,9 @@ gcov_report: clean lcov ${SOURCE} ${TESTS}
 	genhtml -o report/ $@.info
 
 ifeq ($(_UNAME_), Darwin) # MacOS
-#	open $(BROWSER_APP) ./report/index.html
+	open $(BROWSER_APP) ./report/index.html
 else
-#	$(BROWSER_APP) ./report/index.html
+	$(BROWSER_APP) ./report/index.html
 endif
 
 lcov:

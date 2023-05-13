@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAXIMUM_UNSIGNED_INT 4294967295
 #define MINIMUM_INT -2147483648
@@ -18,7 +18,8 @@ unsigned int divide_by_10(s21_decimal *decimal);
 void __turn_info_into_decimal__(int scale, int sign, s21_decimal *dst);
 int normalize_decimal(s21_decimal *a, s21_decimal *b);
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
-int _s21_add_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result, int use);
+int _s21_add_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result,
+              int use);
 int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int _s21_sub_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);
 int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result);

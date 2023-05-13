@@ -1,17 +1,4 @@
-#include "decimal.h"
-
-// int main() {
-//   s21_decimal a = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000};
-//   s21_decimal b = {0x00000159, 0x00000000, 0x00000000, 0x00040000};
-//   s21_decimal res;
-//   s21_mul(a, b, &res);
-
-//   for (int i = 0; i != 4; i++) {
-//     printf("%u\n", res.bits[i]);
-//   }
-
-//   return 0;
-// }
+#include "s21_decimal.h"
 
 void multiply_by_power_of_10(s21_decimal *decimal, int use) {
   unsigned int carry = 0;
@@ -30,8 +17,8 @@ unsigned int divide_by_10(s21_decimal *result) {
     quotient <<= 32;
     quotient += result->bits[i];
     result->bits[i] = (unsigned int)(quotient / 10);
-    remainder = (unsigned int)(quotient - (unsigned long long)result->bits[i] *
-                                              10);
+    remainder =
+        (unsigned int)(quotient - (unsigned long long)result->bits[i] * 10);
   }
   return remainder;
 }
@@ -55,7 +42,6 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
          10) <= MAXIMUM_UNSIGNED_INT) {
       multiply_by_power_of_10(a_scale < b_scale ? a : b, 3);
     } else {
-
       a_scale > b_scale ? (a->bits[3] = (scale_diff << 16) & 0x00FF0000)
                         : (b->bits[3] = (scale_diff << 16) & 0x00FF0000);
       s21_round(a_scale > b_scale ? *a : *b, a_scale > b_scale ? a : b);

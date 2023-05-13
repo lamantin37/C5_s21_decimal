@@ -55,13 +55,6 @@ START_TEST(test) {
 }
 END_TEST
 
-Suite *Create_suite() {
-  Suite *suite = suite_create("s21_decimal tests");
-  TCase *tcase_core = tcase_create("Core");
-  tcase_add_test(tcase_core, test);
-  suite_add_tcase(suite, tcase_core);
-  return suite;
-}
 Suite *Create_suite_s21_is_less_or_equal() {
   Suite *suite = suite_create("s21_decimal_is_less_or_equal tests");
   TCase *tcase_core = tcase_create("Core");

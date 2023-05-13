@@ -12,7 +12,7 @@ Suite *Create_suite_s21_is_greater_or_equal();
 Suite *Create_suite_s21_is_equal();
 Suite *Create_suite_s21_is_not_equal();
 Suite *Create_suite_s21_from_decimal_to_int();
-// Suite *Create_suite_s21_from_decimal_to_float();
+Suite *Create_suite_s21_from_decimal_to_float();
 Suite *Create_suite_s21_from_float_to_decimal();
 Suite *Create_suite_s21_from_int_to_decimal();
 Suite *Create_suite_s21_mul();
@@ -142,18 +142,18 @@ int main(void) {
     printf("Success\n");
   }
 
-  // Suite *suite10 = Create_suite_s21_from_decimal_to_float();
-  // SRunner *suite_runner10 = srunner_create(suite10);
-  // srunner_run_all(suite_runner10, CK_NORMAL);
-  // int failed_count10 = srunner_ntests_failed(suite_runner10);
-  // srunner_free(suite_runner10);
+  Suite *suite10 = Create_suite_s21_from_decimal_to_float();
+  SRunner *suite_runner10 = srunner_create(suite10);
+  srunner_run_all(suite_runner10, CK_NORMAL);
+  int failed_count10 = srunner_ntests_failed(suite_runner10);
+  srunner_free(suite_runner10);
 
-  // if (failed_count10 != 0) {
-  //   printf("Failed tests: %d\n", failed_count10);
-  //   return EXIT_FAILURE;
-  // } else {
-  //   printf("Success\n");
-  // }
+  if (failed_count10 != 0) {
+    printf("Failed tests: %d\n", failed_count10);
+    return EXIT_FAILURE;
+  } else {
+    printf("Success\n");
+  }
 
   Suite *suite11 = Create_suite_s21_from_float_to_decimal();
   SRunner *suite_runner11 = srunner_create(suite11);
@@ -241,6 +241,19 @@ int main(void) {
 
   if (failed_count17 != 0) {
     printf("Failed tests: %d\n", failed_count17);
+    return EXIT_FAILURE;
+  } else {
+    printf("Success\n");
+  }
+
+  Suite *suite18 = Create_suite_s21_mul();
+  SRunner *suite_runner18 = srunner_create(suite18);
+  srunner_run_all(suite_runner18, CK_NORMAL);
+  int failed_count18 = srunner_ntests_failed(suite_runner18);
+  srunner_free(suite_runner18);
+
+  if (failed_count18 != 0) {
+    printf("Failed tests: %d\n", failed_count18);
     return EXIT_FAILURE;
   } else {
     printf("Success\n");

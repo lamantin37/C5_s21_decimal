@@ -53,8 +53,7 @@ START_TEST(from_float_to_decimal_test) {
   for (size_t i = 0; i < sizeof(src) / sizeof(float); ++i) {
     s21_decimal tmp;
     int ret = s21_from_float_to_decimal(src[i], &tmp);
-    for (int j = 0; j < 4; j++)
-      ck_assert_int_eq(tmp.bits[j], dst[i].bits[j]);
+    for (int j = 0; j < 4; j++) ck_assert_int_eq(tmp.bits[j], dst[i].bits[j]);
     ck_assert_int_eq(ret, 0);
   }
 }
