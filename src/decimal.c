@@ -1,16 +1,11 @@
 #include "decimal.h"
 
 // int main() {
-//   float a = 212818288.f;
-//   printf("%f\n\n", a);
-//   s21_decimal res;
-//   s21_from_float_to_decimal(a, &res);
+//   float a = 0.f;
+//   s21_decimal res = {0x0001869F, 0x00000000, 0x00000000, 0x00040000};
+//   s21_from_decimal_to_float(res, &a);
 
-//   for (int i = 0; i != 4; i++) {
-//     printf("%u\n", res.bits[i]);
-//   }
-//   int a_scale = (res.bits[3] >> 16) & 0xFF;
-//   printf("\nscale = %d\n", a_scale);
+//   printf("%f\n", a);
 // }
 
 void multiply_by_power_of_10(s21_decimal *decimal) {
@@ -406,9 +401,9 @@ int s21_from_decimal_to_int(s21_decimal src, int *dst) {
   if (src.bits[1] != 0 || src.bits[2] != 0) {
     return 1;
   } else {
-      *dst = src.bits[0];
+    *dst = src.bits[0];
   }
-  *dst *= sign_src == 1 ? -1: 1;
+  *dst *= sign_src == 1 ? -1 : 1;
   return 0;
 }
 
@@ -436,7 +431,7 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   int zeros_counter = 0;
   for (char *p = buf; *p != '\0'; p++) {
     if (*p != '.' && *p != '-' && *p != 'e') {
-      scale += count_scale ? 1: 0;
+      scale += count_scale ? 1 : 0;
       decimal += (*p - 48) * pow(10, factor);
       factor++;
     } else {
@@ -480,39 +475,22 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   return 0;
 }
 
-int countDigits(unsigned int num) {
-  int count = 0;
-  if (num < 0) {
-    num = -num;
-  }
-  if (num == 0) {
-    return 0;
-  }
-  while (num != 0) {
-    count++;
-    num /= 10;
-  }
-  return count;
-}
-
 int s21_from_decimal_to_float(s21_decimal src, float *dst) {
-  *dst = 0;
-  int decimal_float_part = 0;
-  if (s21_from_decimal_to_int(src, &decimal_float_part) == 1) {
-    return 1;
+  int scale = (src.bits[3] >> 16) & 0xFF;
+  int sign = (src.bits[3] >> 31) & 1;
+  int return_value = 0;
+  *dst = 0.f;
+  for (int i = 0; i < 96; i++) {
+    if (src.bits[i / 32] & (1U << (i % 32))) {
+      *dst += pow(2, i);
+    }
   }
-  int lenght = countDigits(decimal_float_part);
-  int src_scale = (src.bits[3] >> 16) & 0xFF;
-  int new_scale = src_scale - (7 - lenght) > 0 ? src_scale - (7 - lenght) : 0;
-  __turn_info_into_decimal__(new_scale, 0, &src);
-  if (s21_from_decimal_to_int(src, &decimal_float_part) == 1) {
-    return 1;
+  while (scale) {
+    *dst /= 10;
+    scale--;
   }
-  *dst = decimal_float_part;
-  while (countDigits((int)*dst) != lenght) {
-    *dst *= 0.1;
-  }
-  return 0;
+  *dst *= sign ? -1 : 1;
+  return return_value;
 }
 
 /////////////////////////////////////////////////////////////////
