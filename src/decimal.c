@@ -1,13 +1,13 @@
 #include "decimal.h"
 
 // int main() {
-//   s21_decimal a ={0x00000019, 0x00000000, 0x00000000, 0x00010000};
-//   s21_decimal b;
-//   s21_decimal res = {0, 0, 0, 0};
+//   float a = 1.19999996E-27f;
+//   printf("%f\n\n", a);
+//   s21_decimal res;
+//   s21_from_float_to_decimal(a, &res);
 
-//   s21_round(a, &b);
 //   for (int i = 0; i != 4; i++) {
-//     printf("%u\n", b.bits[i]);
+//     printf("%u\n", res.bits[i]);
 //   }
 // }
 
@@ -399,33 +399,14 @@ int s21_from_int_to_decimal(int src, s21_decimal *dst) {
 int s21_from_decimal_to_int(s21_decimal src, int *dst) {
   int src_scale = (src.bits[3] >> 16) & 0xFF;
   int sign_src = (src.bits[3] >> 31) & 1;
-  unsigned int high_bits = src.bits[2];
-  unsigned long long low_middle_bits = 0;
-  if (src_scale <= 10) {
-    low_middle_bits = ((unsigned long long)src.bits[1]) << 32 | src.bits[0];
-    for (int i = 0; i != src_scale; i++) {
-      low_middle_bits /= 10;
-    }
-    if (low_middle_bits > MAXIMUM_INT || src.bits[2] != 0) {
-      return 1;
-    }
-    *dst = (unsigned int)low_middle_bits;
-  } else if (src_scale <= 20) {
-    low_middle_bits = ((unsigned long long)src.bits[2]) << 32 | src.bits[1];
-    for (int i = 0; i != src_scale - 10; i++) {
-      low_middle_bits /= 10;
-    }
-    if (low_middle_bits > MAXIMUM_INT) {
-      return 1;
-    }
-    *dst = (unsigned int)low_middle_bits;
+  s21_truncate(src, &src);
+  *dst = 0;
+  if (src.bits[1] != 0 || src.bits[2] != 0) {
+    return 1;
   } else {
-    *dst = src.bits[2];
-    for (int i = 0; i != src_scale - 20; i++) {
-      *dst /= 10;
-    }
+      *dst = src.bits[0];
   }
-  *dst *= sign_src ? -1 : 1;
+  *dst *= sign_src == 1 ? -1: 1;
   return 0;
 }
 
@@ -439,25 +420,45 @@ int reverse_number(int num) {
 }
 
 int s21_from_float_to_decimal(float src, s21_decimal *dst) {
+  for (int i = 0; i != 4; i++) {
+    dst->bits[i] = 0;
+  }
   char buf[40] = "\0";
   sprintf(buf, "%.7g", src);
   int scale = 0;
   int sign = 0;
   unsigned int decimal = 0;
   int factor = 0;
+  int count_scale = 0;
   for (char *p = buf; *p != '\0'; p++) {
-    if (*p != '.' && *p != '-') {
+    if (*p != '.' && *p != '-' && *p != 'e') {
+      scale += count_scale ? 1: 0;
       decimal += (*p - 48) * pow(10, factor);
       factor++;
     } else {
       if (*p == '.') {
-        scale = factor;
+        count_scale = 1;
       } else if (*p == '-') {
         sign = 1;
+      } else if (*p == 'e') {
+        int exp = 0;
+        int exp_factor = 0;
+        for (char *h = p; *h != '\0'; h++) {
+          if (*h != '-' && *h != 'e') {
+            exp += (*h - 48) * pow(10, exp_factor);
+            exp_factor++;
+          }
+        }
+        exp = reverse_number(exp);
+        if (exp > 28) {
+          return 1;
+        } else {
+          scale += exp;
+        }
+        break;
       }
     }
   }
-  scale = strlen(buf) - 1 - sign - scale;
   __turn_info_into_decimal__(scale, sign, dst);
 
   dst->bits[0] = reverse_number(decimal);
@@ -481,6 +482,7 @@ int countDigits(unsigned int num) {
 }
 
 int s21_from_decimal_to_float(s21_decimal src, float *dst) {
+  *dst = 0;
   int decimal_float_part = 0;
   if (s21_from_decimal_to_int(src, &decimal_float_part) == 1) {
     return 1;
