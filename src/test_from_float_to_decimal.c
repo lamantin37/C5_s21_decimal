@@ -45,10 +45,6 @@ static s21_decimal dst[] = {
     {{0x00000001, 0x00000000, 0x00000000, 0x001C0000}},
 };
 
-static float src_err[] = {
-    0.f, 0.f, -INFINITY, INFINITY, -FLT_MIN,    FLT_MIN, -FLT_MAX, FLT_MAX, 0.f,
-    0.f, 0.f, 0.f,       1.0e-29,  -1.763e-29f, 8.e28f,  7.99e28f, 9.e28f};
-
 START_TEST(from_float_to_decimal_test) {
   for (size_t i = 0; i < sizeof(src) / sizeof(float); ++i) {
     s21_decimal tmp;
