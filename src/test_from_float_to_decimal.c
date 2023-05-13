@@ -47,7 +47,7 @@ static s21_decimal dst[] = {
 
 static float src_err[] = {
     0.f, 0.f, -INFINITY, INFINITY, -FLT_MIN,    FLT_MIN, -FLT_MAX, FLT_MAX, 0.f,
-    0.f, 0.f, 0.f, 1.0e-29,  -1.763e-29f, 8.e28f,  7.99e28f, 9.e28f};
+    0.f, 0.f, 0.f,       1.0e-29,  -1.763e-29f, 8.e28f,  7.99e28f, 9.e28f};
 
 START_TEST(from_float_to_decimal_test) {
   for (size_t i = 0; i < sizeof(src) / sizeof(float); ++i) {
@@ -61,7 +61,7 @@ START_TEST(from_float_to_decimal_test) {
 END_TEST
 
 Suite *Create_suite_s21_from_float_to_decimal() {
-  Suite *suite = suite_create("s21_from_float_to_decimal tests");
+  Suite *suite = suite_create("from_float_to_decimal tests");
   TCase *tcase_core = tcase_create("Core");
   tcase_add_test(tcase_core, from_float_to_decimal_test);
   suite_add_tcase(suite, tcase_core);

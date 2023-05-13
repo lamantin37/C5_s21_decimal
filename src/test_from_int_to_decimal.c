@@ -5,7 +5,7 @@
 #include "s21_decimal.h"
 
 static int src[] = {
-    0, -1, 1, -32768, 32767, 212818281, -2818281,
+    0,           -1,  1,    -32768,   32767,      212818281,   -2818281,
     -2147483647, 100, 9999, -9999999, 2147483647, -2147483648,
 };
 
@@ -39,7 +39,7 @@ START_TEST(ints) {
 END_TEST
 
 Suite *Create_suite_s21_from_int_to_decimal() {
-  Suite *suite = suite_create("s21_from_int_to_decimal tests");
+  Suite *suite = suite_create("from_int_to_decimal tests");
   TCase *tcase_core = tcase_create("Core");
   tcase_add_test(tcase_core, ints);
   suite_add_tcase(suite, tcase_core);

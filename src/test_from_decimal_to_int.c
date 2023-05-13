@@ -38,7 +38,7 @@ START_TEST(s21_from_decimal_to_int_test) {
 END_TEST
 
 Suite *Create_suite_s21_from_decimal_to_int() {
-  Suite *suite = suite_create("s21_from_decimal_to_int tests");
+  Suite *suite = suite_create("from_decimal_to_int tests");
   TCase *tcase_core = tcase_create("Core");
   tcase_add_test(tcase_core, s21_from_decimal_to_int_test);
   suite_add_tcase(suite, tcase_core);

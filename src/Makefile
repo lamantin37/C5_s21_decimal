@@ -22,7 +22,7 @@ endif
 
 PATH := $(PATH):$(BREW)/bin
 GCOV = --coverage
-PROJECT_NAME := decimal
+PROJECT_NAME := s21_decimal
 
 all: clean style ${PROJECT_NAME}.o test gcov_report
 
