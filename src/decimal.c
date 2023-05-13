@@ -24,7 +24,6 @@ void multiply_by_power_of_10(s21_decimal *decimal, int use) {
 }
 
 unsigned int divide_by_10(s21_decimal *result) {
-  s21_decimal ten = {10, 0, 0, 0};
   unsigned int remainder = 0;
   for (int i = 3; i >= 0; i--) {
     unsigned long long quotient = (unsigned long long)remainder;
@@ -244,8 +243,8 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       b_scale--;
     }
     if (remainder >= 5) {
-      s21_decimal one = {1, 0, 0, 0};
-      s21_decimal tmp = {0, 0, 0, 0};
+      s21_decimal one = {{1, 0, 0, 0}};
+      s21_decimal tmp = {{0, 0, 0, 0}};
       _s21_add_(*result, one, &tmp, 3);
       *result = tmp;
     }
