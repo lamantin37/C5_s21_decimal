@@ -185,6 +185,7 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   int b_scale = (value_2.bits[3] >> 16) & 0xFF;
   int sign_a = (value_1.bits[3] >> 31) & 1;
   int sign_b = (value_2.bits[3] >> 31) & 1;
+  int return_value = 0;
 
   s21_decimal ten_exp = {{10, 0, 0, 0}};
   value_2.bits[3] = 0;
@@ -200,7 +201,8 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
       for (int i = 0; i != 4; i++) {
         result->bits[i] = 0;
       }
-      return 1;
+      return_value = 1;
+      break;
     }
     *result = tmp;
     ten_exp.bits[3] |= 1 << 16;
@@ -212,34 +214,41 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     ten_exp.bits[2] = 0;
     ten_exp.bits[3] = 0;
   }
-  for (int i = value_2.bits[0]; i > 0; i--) {
-    s21_decimal tmp = {{0, 0, 0, 0}};
-    if (_s21_add_(*result, value_1, &tmp, 4) == 1) {
-      for (int i = 0; i != 4; i++) {
-        result->bits[i] = 0;
-      }
-      return 1;
-    }
-    *result = tmp;
-  }
-  if (result->bits[3] != 0) {
-    unsigned int remainder = 0;
-    while (b_scale != 0) {
-      remainder = divide_by_10(result);
-      b_scale--;
-    }
-    if (remainder >= 5) {
-      s21_decimal one = {{1, 0, 0, 0}};
+  if (return_value != 1) {
+    for (int i = value_2.bits[0]; i > 0; i--) {
       s21_decimal tmp = {{0, 0, 0, 0}};
-      _s21_add_(*result, one, &tmp, 3);
+      if (_s21_add_(*result, value_1, &tmp, 4) == 1) {
+        for (int i = 0; i != 4; i++) {
+          result->bits[i] = 0;
+        }
+        return_value = 1;
+        break;
+      }
       *result = tmp;
     }
+    if (return_value != 1) {
+      if (result->bits[3] != 0) {
+        unsigned int remainder = 0;
+        while (b_scale != 0) {
+          remainder = divide_by_10(result);
+          b_scale--;
+        }
+        if (remainder >= 5) {
+          s21_decimal one = {{1, 0, 0, 0}};
+          s21_decimal tmp = {{0, 0, 0, 0}};
+          _s21_add_(*result, one, &tmp, 3);
+          *result = tmp;
+        }
+      }
+      if (result->bits[3] != 0) {
+        return_value = 1;
+      }
+      if (return_value != 1) {
+        __turn_info_into_decimal__(a_scale + b_scale, sign_a ^ sign_b, result);
+      }
+    }
   }
-  if (result->bits[3] != 0) {
-    return 1;
-  }
-  __turn_info_into_decimal__(a_scale + b_scale, sign_a ^ sign_b, result);
-  return 0;
+  return return_value;
 }
 
 ///////////////////////////////////////////////////////////////
