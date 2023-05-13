@@ -25,7 +25,7 @@ static s21_decimal dst[] = {
     {{0x80000000, 0x00000000, 0x00000000, 0x80000000}},
 };
 
-START_TEST(ints) {
+START_TEST(test) {
   for (size_t i = 0; i < sizeof(src) / sizeof(int); ++i) {
     s21_decimal tmp;
     int ret = s21_from_int_to_decimal(src[i], &tmp);
@@ -41,7 +41,7 @@ END_TEST
 Suite *Create_suite_s21_from_int_to_decimal() {
   Suite *suite = suite_create("from_int_to_decimal tests");
   TCase *tcase_core = tcase_create("Core");
-  tcase_add_test(tcase_core, ints);
+  tcase_add_test(tcase_core, test);
   suite_add_tcase(suite, tcase_core);
   return suite;
 }
