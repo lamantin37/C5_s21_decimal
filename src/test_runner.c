@@ -11,6 +11,10 @@ Suite *Create_suite_s21_is_greater();
 Suite *Create_suite_s21_is_greater_or_equal();
 Suite *Create_suite_s21_is_equal();
 Suite *Create_suite_s21_is_not_equal();
+Suite *Create_suite_s21_from_decimal_to_int();
+Suite *Create_suite_s21_from_decimal_to_float();
+// Suite *Create_suite_s21_from_float_to_decimal();
+Suite *Create_suite_s21_from_int_to_decimal();
 
 int main(void) {
   printf("\n");
@@ -115,6 +119,58 @@ int main(void) {
 
   if (failed_count8 != 0) {
     printf("Failed tests: %d\n", failed_count8);
+    return EXIT_FAILURE;
+  } else {
+    printf("Success\n");
+  }
+
+  Suite *suite9 = Create_suite_s21_from_decimal_to_int();
+  SRunner *suite_runner9 = srunner_create(suite9);
+  srunner_run_all(suite_runner9, CK_NORMAL);
+  int failed_count9 = srunner_ntests_failed(suite_runner9);
+  srunner_free(suite_runner9);
+
+  if (failed_count9 != 0) {
+    printf("Failed tests: %d\n", failed_count9);
+    return EXIT_FAILURE;
+  } else {
+    printf("Success\n");
+  }
+
+  Suite *suite10 = Create_suite_s21_from_decimal_to_float();
+  SRunner *suite_runner10 = srunner_create(suite10);
+  srunner_run_all(suite_runner10, CK_NORMAL);
+  int failed_count10 = srunner_ntests_failed(suite_runner10);
+  srunner_free(suite_runner10);
+
+  if (failed_count10 != 0) {
+    printf("Failed tests: %d\n", failed_count10);
+    return EXIT_FAILURE;
+  } else {
+    printf("Success\n");
+  }
+
+  // Suite *suite11 = Create_suite_s21_from_float_to_decimal();
+  // SRunner *suite_runner11 = srunner_create(suite11);
+  // srunner_run_all(suite_runner11, CK_NORMAL);
+  // int failed_count11 = srunner_ntests_failed(suite_runner11);
+  // srunner_free(suite_runner11);
+
+  // if (failed_count11 != 0) {
+  //   printf("Failed tests: %d\n", failed_count11);
+  //   return EXIT_FAILURE;
+  // } else {
+  //   printf("Success\n");
+  // }
+
+  Suite *suite12 = Create_suite_s21_from_int_to_decimal();
+  SRunner *suite_runner12 = srunner_create(suite12);
+  srunner_run_all(suite_runner12, CK_NORMAL);
+  int failed_count12 = srunner_ntests_failed(suite_runner12);
+  srunner_free(suite_runner12);
+
+  if (failed_count12 != 0) {
+    printf("Failed tests: %d\n", failed_count12);
     return EXIT_FAILURE;
   } else {
     printf("Success\n");
