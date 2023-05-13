@@ -24,20 +24,26 @@ PATH := $(PATH):$(BREW)/bin
 GCOV = --coverage
 PROJECT_NAME := s21_decimal
 
-all: clean style ${PROJECT_NAME}.o test gcov_report
+all: clean style ${PROJECT_NAME}.a test gcov_report
 
-${PROJECT_NAME}.o: ${SOURCE} ${HEADERS}
-	$(CC) -c $(CFLAGS) ${SOURCE}
-
-test: $(TESTS) ${PROJECT_NAME}.o
+$(PROJECT_NAME).a: ${SOURCE} ${HEADERS}
 	$(info                                         )
 	$(info ----------------------------------------)
-	$(info Build tests                             )
+	$(info Build a static library 's21_decimal.a'  )
+	$(info ----------------------------------------)
+	$(CC) -c $(CFLAGS) ${SOURCE}
+	ar rc $@ ${OBJECTS}
+	ranlib $@	
+
+test: $(TESTS) ${PROJECT_NAME}.a
+	$(info                                         )
+	$(info ----------------------------------------)
+	$(info Build tests                           )
 	$(info ----------------------------------------)
 	$(CC) $^ $(ADD_LIB) -o $@  
 	./$@
 
-debug: $(TESTS) ${PROJECT_NAME}
+debug: $(TESTS) ${PROJECT_NAME}.a
 	$(info                                         )
 	$(info ----------------------------------------)
 	$(info Build tests with debug for valgrind     )
