@@ -1,7 +1,7 @@
 #include "decimal.h"
 
 // int main() {
-//   float a = 1.19999996E-27f;
+//   float a = 212818288.f;
 //   printf("%f\n\n", a);
 //   s21_decimal res;
 //   s21_from_float_to_decimal(a, &res);
@@ -9,6 +9,8 @@
 //   for (int i = 0; i != 4; i++) {
 //     printf("%u\n", res.bits[i]);
 //   }
+//   int a_scale = (res.bits[3] >> 16) & 0xFF;
+//   printf("\nscale = %d\n", a_scale);
 // }
 
 void multiply_by_power_of_10(s21_decimal *decimal) {
@@ -430,6 +432,8 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
   unsigned int decimal = 0;
   int factor = 0;
   int count_scale = 0;
+  int zeros_counter_in_e_case = 0;
+  int zeros_counter = 0;
   for (char *p = buf; *p != '\0'; p++) {
     if (*p != '.' && *p != '-' && *p != 'e') {
       scale += count_scale ? 1: 0;
@@ -448,21 +452,31 @@ int s21_from_float_to_decimal(float src, s21_decimal *dst) {
             exp += (*h - 48) * pow(10, exp_factor);
             exp_factor++;
           }
+          if (*h == '0') {
+            zeros_counter_in_e_case++;
+          } else {
+            zeros_counter_in_e_case = 0;
+          }
         }
         exp = reverse_number(exp);
-        if (exp > 28) {
-          return 1;
-        } else {
-          scale += exp;
+        for (; zeros_counter_in_e_case != 0; zeros_counter_in_e_case--) {
+          exp *= 10;
         }
+        scale += exp;
         break;
       }
     }
+    if (*p == '0') {
+      zeros_counter++;
+    } else {
+      zeros_counter = 0;
+    }
   }
   __turn_info_into_decimal__(scale, sign, dst);
-
   dst->bits[0] = reverse_number(decimal);
-
+  for (; zeros_counter != 0; zeros_counter--) {
+    dst->bits[0] *= 10;
+  }
   return 0;
 }
 
