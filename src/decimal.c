@@ -1,33 +1,46 @@
 #include "decimal.h"
 
 // int main() {
-//   float a = 0.f;
-//   s21_decimal res = {0x0001869F, 0x00000000, 0x00000000, 0x00040000};
-//   s21_from_decimal_to_float(res, &a);
+//   s21_decimal a = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000};
+//   s21_decimal b = {0x00000159, 0x00000000, 0x00000000, 0x00040000};
+//   s21_decimal res;
+//   s21_mul(a, b, &res);
 
-//   printf("%f\n", a);
+//   for (int i = 0; i != 4; i++) {
+//     printf("%u\n", res.bits[i]);
+//   }
+
+//   return 0;
 // }
 
-void multiply_by_power_of_10(s21_decimal *decimal) {
+void multiply_by_power_of_10(s21_decimal *decimal, int use) {
   unsigned int carry = 0;
-  for (int i = 0; i != 3; i++) {
+  for (int i = 0; i != use; i++) {
     unsigned long long product =
         ((unsigned long long)decimal->bits[i]) * 10 + carry;
-    decimal->bits[i] = (unsigned int)(product & 0xFFFFFFFF);
+    decimal->bits[i] = (unsigned int)product;
     carry = (unsigned int)(product >> 32);
   }
+}
+
+unsigned int divide_by_10(s21_decimal *result) {
+  s21_decimal ten = {10, 0, 0, 0};
+  unsigned int remainder = 0;
+  for (int i = 3; i >= 0; i--) {
+    unsigned long long quotient = (unsigned long long)remainder;
+    quotient <<= 32;
+    quotient += result->bits[i];
+    result->bits[i] = (unsigned int)(quotient / 10);
+    remainder = (unsigned int)(quotient - (unsigned long long)result->bits[i] *
+                                              10);
+  }
+  return remainder;
 }
 
 void __turn_info_into_decimal__(int scale, int sign, s21_decimal *dst) {
   dst->bits[3] &= 0xFF000000;
   dst->bits[3] |= (scale << 16) & 0x00FF0000;
   dst->bits[3] |= (sign << 31) & 0x80000000;
-}
-
-void longIntoInts(unsigned long long result, unsigned int *a,
-                  unsigned int *overflow) { //
-  *a = (unsigned int)result;
-  *overflow = (unsigned int)(result >> 32);
 }
 
 int normalize_decimal(s21_decimal *a, s21_decimal *b) {
@@ -41,7 +54,7 @@ int normalize_decimal(s21_decimal *a, s21_decimal *b) {
   while (scale_diff) {
     if (((unsigned long long)(a_scale < b_scale ? a->bits[2] : b->bits[2]) *
          10) <= MAXIMUM_UNSIGNED_INT) {
-      multiply_by_power_of_10(a_scale < b_scale ? a : b);
+      multiply_by_power_of_10(a_scale < b_scale ? a : b, 3);
     } else {
 
       a_scale > b_scale ? (a->bits[3] = (scale_diff << 16) & 0x00FF0000)
@@ -97,10 +110,10 @@ int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     }
   } else if (sign_b == 1 && sign_b == 1) {
     result->bits[3] |= (1 << 31);
-    result_func = _s21_add_(value_1, value_2, result);
+    result_func = _s21_add_(value_1, value_2, result, 3);
     result_func = result_func == 1 ? 2 : 0;
   } else {
-    result_func = _s21_add_(value_1, value_2, result);
+    result_func = _s21_add_(value_1, value_2, result, 3);
   }
   return result_func;
 }
@@ -114,10 +127,10 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   int result_func = 0;
   if (sign_a > sign_b) {
     result->bits[3] |= (1 << 31);
-    result_func = _s21_add_(value_1, value_2, result);
+    result_func = _s21_add_(value_1, value_2, result, 3);
     result_func = result_func == 1 ? 2 : 0;
   } else if (sign_b > sign_a) {
-    result_func = _s21_add_(value_1, value_2, result);
+    result_func = _s21_add_(value_1, value_2, result, 3);
   } else if (sign_b == 1 && sign_b == 1) {
     s21_negate(value_1, &value_1);
     s21_negate(value_2, &value_2);
@@ -138,24 +151,17 @@ int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   return result_func;
 }
 
-int _s21_add_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
+int _s21_add_(s21_decimal value_1, s21_decimal value_2, s21_decimal *result,
+              int use) {
   int scale = normalize_decimal(&value_1, &value_2);
   result->bits[3] |= (scale << 16) & 0x00FF0000;
   unsigned int carry = 0;
-  unsigned int carry_case = 0;
-  for (int i = 0; i != 3; i++) {
+  for (int i = 0; i != use; i++) {
     unsigned long long num = (unsigned long long)value_1.bits[i] +
-                             (unsigned long long)value_2.bits[i];
-    unsigned int result_value = 0;
-
-    unsigned long long tmp = (unsigned long long)value_1.bits[i] +
                              (unsigned long long)value_2.bits[i] +
                              (unsigned long long)carry;
-    carry_case = (tmp > MAXIMUM_UNSIGNED_INT) && (carry & 1) ? 1 : 0;
-    result->bits[i] += carry;
-    longIntoInts(num, &result_value, &carry);
-    carry += carry_case;
-    result->bits[i] += result_value;
+    result->bits[i] = (unsigned int)num;
+    carry = (unsigned int)(num >> 32);
   }
   int return_value = 0;
   if (carry != 0) {
@@ -195,17 +201,17 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
   int sign_a = (value_1.bits[3] >> 31) & 1;
   int sign_b = (value_2.bits[3] >> 31) & 1;
 
-  s21_decimal ten_exp = {10, 0, 0, 0};
+  s21_decimal ten_exp = {{10, 0, 0, 0}};
   value_2.bits[3] = 0;
+  value_1.bits[3] = 0;
   while (s21_is_greater(value_2, ten_exp)) {
     s21_decimal multiplicand = value_1;
-    multiplicand.bits[3] = 0;
     while (s21_is_greater_or_equal(value_2, ten_exp)) {
-      multiply_by_power_of_10(&ten_exp);
-      multiply_by_power_of_10(&multiplicand);
+      multiply_by_power_of_10(&ten_exp, 4);
+      multiply_by_power_of_10(&multiplicand, 4);
     }
-    s21_decimal tmp = {0, 0, 0, 0};
-    if (_s21_add_(*result, multiplicand, &tmp) == 1) {
+    s21_decimal tmp = {{0, 0, 0, 0}};
+    if (_s21_add_(*result, multiplicand, &tmp, 4) == 1) {
       for (int i = 0; i != 4; i++) {
         result->bits[i] = 0;
       }
@@ -221,16 +227,31 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
     ten_exp.bits[2] = 0;
     ten_exp.bits[3] = 0;
   }
-  value_1.bits[3] = 0;
   for (int i = value_2.bits[0]; i > 0; i--) {
-    s21_decimal tmp = {0, 0, 0, 0};
-    if (_s21_add_(*result, value_1, &tmp) == 1) {
+    s21_decimal tmp = {{0, 0, 0, 0}};
+    if (_s21_add_(*result, value_1, &tmp, 4) == 1) {
       for (int i = 0; i != 4; i++) {
         result->bits[i] = 0;
       }
       return 1;
     }
     *result = tmp;
+  }
+  if (result->bits[3] != 0) {
+    unsigned int remainder = 0;
+    while (b_scale != 0) {
+      remainder = divide_by_10(result);
+      b_scale--;
+    }
+    if (remainder >= 5) {
+      s21_decimal one = {1, 0, 0, 0};
+      s21_decimal tmp = {0, 0, 0, 0};
+      _s21_add_(*result, one, &tmp, 3);
+      *result = tmp;
+    }
+  }
+  if (result->bits[3] != 0) {
+    return 1;
   }
   __turn_info_into_decimal__(a_scale + b_scale, sign_a ^ sign_b, result);
   return 0;
@@ -271,7 +292,7 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal *result) {
                                               value_2.bits[i + shift]);
   }
   if (scale_factor < 0) {
-    s21_decimal mul = {10, 0, 0, 0};
+    s21_decimal mul = {{10, 0, 0, 0}};
     for (; scale_factor != 0; scale_factor++) {
       s21_mul(*result, mul, result);
     }
@@ -349,7 +370,7 @@ int s21_negate(s21_decimal value, s21_decimal *result) {
   result->bits[0] = value.bits[0];
   result->bits[1] = value.bits[1];
   result->bits[2] = value.bits[2];
-  result->bits[3] = (value.bits[3] & 0x7F000000) | value.bits[3] ^ 0x80000000;
+  result->bits[3] = (value.bits[3] & 0x7F000000) | (value.bits[3] ^ 0x80000000);
   return 0;
 }
 
@@ -363,7 +384,6 @@ int s21_from_int_to_decimal(int src, s21_decimal *dst) {
 }
 
 int s21_from_decimal_to_int(s21_decimal src, int *dst) {
-  int src_scale = (src.bits[3] >> 16) & 0xFF;
   int sign_src = (src.bits[3] >> 31) & 1;
   int return_value = 0;
   s21_truncate(src, &src);
@@ -476,7 +496,7 @@ int s21_truncate(s21_decimal value, s21_decimal *result) {
     return_value = 1;
   } else {
     if (src_scale > 0) {
-      s21_decimal divisor = {10, 0, 0, 0};
+      s21_decimal divisor = {{10, 0, 0, 0}};
       for (; src_scale != 0; src_scale--) {
         s21_div(value, divisor, &value);
       }
@@ -506,10 +526,10 @@ int s21_floor(s21_decimal value, s21_decimal *result) {
         return_value = 1;
       } else {
         if (sign_src == 1) {
-          s21_decimal minus_one = {1, 0, 0, 0};
+          s21_decimal minus_one = {{1, 0, 0, 0}};
           minus_one.bits[3] |= 0x80000000;
-          s21_decimal tmp = {0, 0, 0, 0};
-          _s21_add_(*result, minus_one, &tmp);
+          s21_decimal tmp = {{0, 0, 0, 0}};
+          _s21_add_(*result, minus_one, &tmp, 3);
           *result = tmp;
           __turn_info_into_decimal__(0, 1, result);
         }
@@ -527,7 +547,6 @@ int s21_round(s21_decimal value, s21_decimal *result) {
   for (int i = 0; i != 4; i++) {
     result->bits[i] = 0;
   }
-  s21_decimal res = {0, 0, 0, 0};
   if (src_scale > 0) {
     s21_decimal tmp = value;
     __turn_info_into_decimal__(src_scale - 1, sign_src, &tmp);
@@ -536,8 +555,8 @@ int s21_round(s21_decimal value, s21_decimal *result) {
     __turn_info_into_decimal__(1, sign_src, &tmp);
     s21_sub(tmp, value, &tmp);
     if (tmp.bits[0] >= 5) {
-      s21_decimal one = {1, 0, 0, 0};
-      _s21_add_(value, one, result);
+      s21_decimal one = {{1, 0, 0, 0}};
+      _s21_add_(value, one, result, 3);
       __turn_info_into_decimal__(0, sign_src, result);
     } else {
       *result = value;
